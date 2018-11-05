@@ -1,0 +1,1 @@
+Following the approach of Morris & Pounds, a distribution of P-values can be decomposed as a mixture of two beta distributions, one with shape paramter (α) of 1 - modelling noise under the null-hypothesis - and another with a variable (a), modelling signal. One can view this as modeling P-values as a random process where P ~ (1-λ)β(a,1) + λβ(1,1)
