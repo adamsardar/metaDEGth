@@ -30,9 +30,11 @@ It follows from inverse transform sampling that:
 $$Y = -2log(X) \sim exp(1/2) \sim \chi^2_{2}$$
 More generally, for multiple uniform random variables, their sum can be modelled as though drawn from a Chi-squared distribution with an appropriate number of degrees of freedom.
 
-$$Y_{n} = \sum^n_{i} -2log(X_{i}) \sim Gamma(n,2) \sim \chi^2_{2n}$$
+$$Y_{n} = \sum^n_{i} -2log(X_{i}) \sim \Gamma(n,2) = \chi^2_{2n}$$
 
 Hence a set of $k$ independent P-values can be used for a set-wise test using a $\chi^2_{2k}$ distribution. However, statistical tests are typically correlated and hence not independent
+
+*TODO* Demonstrate the progression from thresholded P-values to continuous scores (using Fisher's exact)
 
 *TODO* Talk of GAGE method
 
@@ -40,7 +42,9 @@ Hence a set of $k$ independent P-values can be used for a set-wise test using a 
 
 *TODO* Contrast with Birnaum's 1954 condition (CONDITION 1 in KARL PEARSON’S META-ANALYSIS REVISITED)
 
-*TODO* P-value not independent. Dimitris suggests that one can use the approach of Galwey 2009
+*TODO* Include a comparison with GSEA/Wilcox (Jonny's recommendations)
+
+*TODO* P-values are not independent. Dimitris suggests that one can use the approach of Galwey 2009
 
 # Results
 
