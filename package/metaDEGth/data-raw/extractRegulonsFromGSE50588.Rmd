@@ -1,0 +1,144 @@
+---
+title: "Processing GSE50588 to produce validation sets"
+author: "Adam Sardar"
+date: "19 November 2018"
+output: html_document
+---
+
+# TODO detail motivation further
+
+[Cusanovich et al.](http://dx.plos.org/10.1371/journal.pgen.1004226) have prepared a fantastic dataset of transcription factors knocked down with siRNA in a lymphoblastoid cell line. This is a perfect dataset for producing a gold standard form the metaDEGth algorithm.
+
+"201 samples were analyzed - 57 transcription factors were knocked down in triplicate in the same cell line, 2 factors were knocked down in 6 replicates each and an additional 18 control knockdowns (siRNA not targeting any known gene) were analyzed"
+
+The authors use Illumina HumanHT-12 V4.0 expression beadchips, so a pipeline that makes use of the detection P-value should be employed. Luckily limma solves the problem for us!
+
+# Import data
+
+Download the unnormalised zipped expression data directly from GEO
+
+```{r Read in data directly from GEO}
+
+library(data.table)
+
+GSE50588_unnormalised_RAW_DT <- fread(
+  cmd = "curl ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE50nnn/GSE50588/suppl/GSE50588_non-normalized.txt.gz | zcat",
+  check.names = TRUE)
+```
+
+Build an annotation frame for the experimental system
+
+```{r Sample metadata extraction and clean up}
+
+library(stringr)
+
+samples_GSE50588_metadataDT <- data.table(
+  sampleNames = names(GSE50588_unnormalised_RAW_DT) )
+
+samples_GSE50588_metadataDT[, TFknockdown := shift(sampleNames)]
+samples_GSE50588_metadataDT[sampleNames %like% "Detect", sampleNames := str_c(TFknockdown,"_DetectionPval")]
+samples_GSE50588_metadataDT[!sampleNames %like% "detect", TFknockdown :=  sampleNames]
+samples_GSE50588_metadataDT[, TFknockdown := str_remove(TFknockdown, "_\\d(_rep)?")]
+
+samples_GSE50588_metadataDT[sampleNames %like% "NS", TFknockdown := "CONTROL"]
+
+samples_GSE50588_metadataDT[,
+                            type := ifelse(str_detect(sampleNames,"Pval"),"pValue","expression"),
+                            by = sampleNames]
+samples_GSE50588_metadataDT[sampleNames == "ID_REF", type := "ID"]
+
+samples_GSE50588_metadataDT[type == "expression",.N ,by = TFknockdown][order(N)]
+```
+
+# Background correct and quantile normalise
+
+We shall make use of the  `neqc` function in the `limma` package, which is designed for use with Illumina BeadChips; it performs background correction followed by quantile normalisation across all samples, using detection P-values provided by the BeadArray detector.
+
+```{r Normalise Raw Measurements}
+
+library(limma)
+
+setnames(GSE50588_unnormalised_RAW_DT, samples_GSE50588_metadataDT$sampleNames)
+
+exprsMat <- GSE50588_unnormalised_RAW_DT[, 
+                                    as.matrix(.SD, rownames = ID_REF),
+                    .SDcols = samples_GSE50588_metadataDT[type == "expression", sampleNames] ]
+
+detectionPvalueMat <- GSE50588_unnormalised_RAW_DT[,
+                                    as.matrix(.SD, rownames = ID_REF),
+                    .SDcols = samples_GSE50588_metadataDT[type == "pValue", sampleNames] ]
+
+GSE50588_expObj <- neqc(x = exprsMat,
+                        detection.p = detectionPvalueMat)
+```
+
+# Map Ilumina probe IDs
+
+GEO provides an annotation file detailing [GPL10558](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GPL10558), corresponding to the HumanHT-12 v4 Expression BeadChip used in the experiment.
+
+```{r Construct annotation frame}
+
+GPL10558_annot_DT <- fread(cmd = "curl ftp://ftp.ncbi.nlm.nih.gov/geo/platforms/GPL10nnn/GPL10558/suppl/GPL10558_HumanHT-12_V4_0_R2_15002873_B.txt.gz | zcat", skip = 8, header = TRUE, fill = TRUE)
+
+GPL10558_annot_DT <- unique(GPL10558_annot_DT[Probe_Id != "",.(Probe_Id, RefSeq_ID, Entrez_Gene_ID, Symbol ,Definition)])
+
+setkey(GPL10558_annot_DT, "Probe_Id")
+```
+
+# Fit limma model and estimate differential expression
+
+A linear model fit first requires a design matrix detailing what contrasts can be drawn between which experiments.
+
+```{r Produce contrast and design matricies}
+
+assayedTFs <- samples_GSE50588_metadataDT[type == "expression" & TFknockdown != "CONTROL", unique(TFknockdown)]
+          
+GSE50588_designMat <- model.matrix(sampleNames ~ 0 + TFknockdown,
+                                   samples_GSE50588_metadataDT[type == "expression",.(sampleNames,TFknockdown)])
+
+colnames(GSE50588_designMat) %<>% str_remove("TFknockdown")
+row.names(GSE50588_designMat) <- samples_GSE50588_metadataDT[type == "expression", sampleNames]
+
+
+GSE50588_TFcontrastMat <- makeContrasts(
+              contrasts = str_c("CONTROL-",assayedTFs),
+              levels = GSE50588_designMat)
+```
+
+We are now ready to build models and compare contrasts (siRNA knockdowns). The plan is to 
+
+```{r Fit model and estimate differential expression}
+
+library(purrr)
+
+GSE50588_lmFit <- lmFit(GSE50588_expObj,
+                        design = GSE50588_designMat) %>%
+                  contrasts.fit(contrasts = GSE50588_TFcontrastMat) %>%
+                  eBayes
+
+TF_siRNA_knockdowns_diffex <- map(
+  assayedTFs,
+  ~{ diffexDT <- data.table(topTable(GSE50588_lmFit, coef = which(.x==assayedTFs), number = Inf),
+                            keep.rownames = TRUE )
+     
+    setnames(diffexDT,
+             c("rn","logFC","P.Value"),
+             c("HumanHT12v4probeID", str_c(.x,c("_logFC","_pValue")) ))
+    
+    setkey(diffexDT, "HumanHT12v4probeID")
+    
+    return(diffexDT[,.SD,.SDcols = c("HumanHT12v4probeID", str_c(.x,"_logFC") , str_c(.x,"_pValue"))])
+  })
+
+TF_siRNA_knockdowns_GSE50588_summary <- Reduce(function(x,y){x[y]}, TF_siRNA_knockdowns_diffex) %>%    
+                                .[GPL10558_annot_DT, , on = .(HumanHT12v4probeID == Probe_Id)]
+
+save(TF_siRNA_knockdowns_GSE50588_summary,
+     file = "../data/TF_siRNA_knockdowns_GSE50588_summary.RData",
+     compress = "xz")
+
+object.size(TF_siRNA_knockdowns_GSE50588_summary) %>% print(units = "Mb")
+
+```
+
+# TODO - a few volcano plots with some regulons highlighted
