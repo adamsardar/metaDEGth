@@ -146,17 +146,16 @@ on_failure(validateNumericCutoff) <- function(call, env){ paste0(deparse(call$x)
 
 ############
 
-validatePvalue <- function(candidateP){
+validatePvalues <- function(candidatePvalues){
   
-  assert_that(is.numeric(candidateP),
-              candidateP >= 0,
-              candidateP <= 1,
-              length(candidateP) == 1)
+  assert_that(is.numeric(candidatePvalues),
+              all(candidateP >= 0),
+              (candidateP <= 1))
   
-  invisible(candidateP)
+  invisible(candidatePvalues)
 }
 
-on_failure(validatePvalue) <- function(call, env){ paste0(deparse(call$x), "  should be a P-value, hence must be between 0 and 1") }
+on_failure(validatePvalues) <- function(call, env){ paste0(deparse(call$x), "  should be a P-value, hence must be between 0 and 1") }
 
 
 ############
