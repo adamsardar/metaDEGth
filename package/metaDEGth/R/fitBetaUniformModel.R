@@ -94,7 +94,7 @@ print.bum <- function (x, ...) {
 #' @references Pounds, S., & Morris, S. W. (2003). Estimating the occurrence of false positives and false negatives in microarray studies by approximating and partitioning the empirical distribution of p-values. Bioinformatics
 betaUniformScore <- function(pVals, betaUniformFit, FDR = 5E-2){
   
-  #TODO check betaUniformFit object
+  #TODO check betaUniformFit object via validator
   
   return(log( pbeta(pVals, betaUniformFit$a, 1), pbeta(rep(FDR, length(pVals)), betaUniformFit$a, 1)) - 1)
 }

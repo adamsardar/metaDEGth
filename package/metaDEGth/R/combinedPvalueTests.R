@@ -18,15 +18,17 @@
 #' @export
 mixtureGammaTest <- function(testStat = NULL, nValues = NULL, geneSet = NULL, betaUniformFit = NULL){
 
-  #TODO check that one of either 'geneSet' or 'testStat & nValues' alongside 'betaUniformFit' has been provided (but not both)
+  # TODO check that one of either 'geneSet' or 'testStat & nValues' alongside 'betaUniformFit' has been provided (but not both)
+  # Might be worth implementing as an S4 method with multiple dispatch
 
+  #TODO validate class of betaUniformFit
+  
   #TODO extract out P-Values from betaUniformFit object to produce a testStatistic
   # testStat <- sum(-log(pVals)
 
   nValues <- length(geneSet)
   
-  #TODO validate class of betaUniformFit
-  fittedBetaShape <- betaUniformFit$alpha
+  fittedBetaShape <- betaUniformFit$a
   nonUniformProportion <- betaUniformFit$lambda
   
   combinedPval <- nonUniformProportion * pgamma(testStat, shape = nValues, rate = 1, lower.tail = FALSE) +
