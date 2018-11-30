@@ -5,24 +5,32 @@
 #' of false positives
 #' 
 #' @param testStat The sum of the natural logarithm of P-values of differential expression of genes in the set of interest (no need to define if geneSet is provided)
+#' @param nValues The number of values in the gene set of interest
 #' @param geneSet A collection of gene names that will be used to construct the test statistic (no need to define if testStat is provided)
 #' @param betaUniformFit An object of class 'bum' (produced using fitBetaUniformParameters or BioNet::fitBumModel) that contains the relevant parameters of a Beta-Uniform decomposition of P-values
 #'
-#' @return p.val the P-value of the meta-analysis
+#' @return combinedPval A single p-value combining the results of multiple hypothesis tests into one
 #' @seealso fishersCombindedProbabilityTest
 #' @seealso fitBetaUniformParameters
 #' @seealso BioNet::fitBumModel
 #' @references Luo, W., Friedman, M. S., Shedden, K., Hankenson, K. D., & Woolf, P. J. (2009). GAGE: generally applicable gene set enrichment for pathway analysis. BMC Bioinformatics
 #' @importFrom stats pgamma
 #' @export
-mixtureGammaTest <- function(testStat = NULL, geneSet = NULL, betaUniformFit = NULL){
+mixtureGammaTest <- function(testStat = NULL, nValues = NULL, geneSet = NULL, betaUniformFit = NULL){
 
-  #TODO check that one of geneSet or testStat has been provided (but not both)
+  #TODO check that one of either 'geneSet' or 'testStat & nValues' alongside 'betaUniformFit' has been provided (but not both)
+
   #TODO extract out P-Values from betaUniformFit object to produce a testStatistic
-  #TODO check form class of betaUniformFit
+  # testStat <- sum(-log(pVals)
+
+  nValues <- length(geneSet)
   
-  combinedPval <- fb.lambda*pgamma(testStat, n.values, 1, lower.tail = FALSE) +
-                  (1-fb.lambda)*pgamma(testStat, n.values, fb.alpha, lower.tail = FALSE)
+  #TODO validate class of betaUniformFit
+  fittedBetaShape <- betaUniformFit$alpha
+  nonUniformProportion <- betaUniformFit$lambda
+  
+  combinedPval <- nonUniformProportion * pgamma(testStat, shape = nValues, rate = 1, lower.tail = FALSE) +
+                  (1-nonUniformProportion) * pgamma(testStat, shape = nValues, rate = fittedBetaShape, lower.tail = FALSE)
 
   return(combinedPval)
 }
@@ -37,18 +45,20 @@ mixtureGammaTest <- function(testStat = NULL, geneSet = NULL, betaUniformFit = N
 #' We therefore simply calculate the point in the cumulative of the gamma distribution
 #' 
 #' @param pVals A numerical vector of P-values
-#' @return combindedP A single p-value combining multiple others
+#' @return combindedP A single p-value combining the results of multiple hypothesis tests into one
 #' @references \url{https://en.wikipedia.org/wiki/Fisher%27s_method}
 #' @references \url{https://en.wikipedia.org/wiki/Erlang_distribution#Related_distributions}
 #' @importFrom stats pgamma
 #' @export
 fishersCombindedProbabilityTest <- function(pVals){
   
-  #TODO migrate to using validators
+  validatePvalues(pVals)
   
-  assert_that(all(is.numeric(pVals)),
-              all(is.pval(pVals)),
-              msg = "pVals must be named, numeric and between 0 and 1")
+  testStatistic <- sum(-log(pVals))
+  nValues <- length(pVals)
   
-  return(pgamma(sum(-log(pVals)), length(pVals), lower.tail = FALSE))
+  #Using the pgama parameterisation so as to be consistent with the mixtureGammaTest
+  combinedPval <- pgamma(testStatistic, shape = nValues, rate = 1, lower.tail = FALSE) 
+  
+  return(combinedPval)
 }
