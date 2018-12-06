@@ -3,3 +3,5 @@ Following the approach of Morris & Pounds, a distribution of P-values can be dec
 [Fisher's method](https://en.wikipedia.org/wiki/Fisher%27s_method) of combining independent P-values can be used to conduct a meta-analysis across several tests. However, it assumes a null hypothesis of uniformly distributed P-values, which in the presence of signal is manifestly incorrect. This work looks to produce an analagous test against an appropriately specified null-hypothesis that respects the pre-existing signal.
 
 The aim of this work is a short paper for BioArXiv/PeerJ and a small R package.
+
+Yes, the package name is a ban play on the [80's metal band.](https://en.wikipedia.org/wiki/Megadeth)
