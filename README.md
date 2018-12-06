@@ -4,4 +4,4 @@ Following the approach of Morris & Pounds, a distribution of P-values can be dec
 
 The aim of this work is a short paper for BioArXiv/PeerJ and a small R package.
 
-Yes, the package name is a ban play on the [80's metal band.](https://en.wikipedia.org/wiki/Megadeth)
+Yes, the package name is a bad play on the [80's metal band.](https://en.wikipedia.org/wiki/Megadeth)
