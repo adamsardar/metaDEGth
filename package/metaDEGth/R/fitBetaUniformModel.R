@@ -4,16 +4,18 @@
 #' one with shape paramter (\eqn{\alpha}) of 1 - modelling noise under the null-hypothesis - and another with a variable (a), modelling
 #' signal. One can view this as modeling P-values as a random process where \eqn{P ~ (1-\lambda)\beta(a,1) + \lambda\beta(1,1)}
 #' 
-#' Designed to be a drop-in replacement for the BioNet fitBumModel
+#' Designed to be a drop-in replacement for BioNet::fitBumModel.
+#' 
+#' Note that this function can make use of parallel backends (set up and registered by the user outside of this function) from the doParallel package. See doParallel::registerDoParallel.
 #' 
 #' @param pVals A numeric vector of P-values for which to perform Beta-Uniform decomposition
-#' @param nStarts How many repeats of the fitting routine should the routine run?
+#' @param nStarts How many repeats of the fitting routine should the routine run? The default is 5, but in some cases (when there is no 'clean' P-value distribution), it might be worth running for more iterations.
 #' @return fb A list of three components: a - the shape parameter, lambda - the mixture parameter and negLL - the negative log-likelihood of the data under the model
 #' @importFrom MASS fitdistr
 #' @importFrom stats na.omit coef logLik
-#' @importFrom purrr map
+#' @import foreach
 #' @export
-#' @seealso betaUniformScore BioNet::fitBumModel
+#' @seealso betaUniformScore BioNet::fitBumModel doParallel::registerDoParallel
 #' 
 #' @examples 
 #' data(pvalues)
@@ -24,43 +26,52 @@
 #' betaUnifScored <- betaUniformScore(pvalues$pValue_diffex, fbMod, FDR = 0.01) - 1
 #' 
 #' @references Pounds, S., & Morris, S. W. (2003). Estimating the occurrence of false positives and false negatives in microarray studies by approximating and partitioning the empirical distribution of p-values. Bioinformatics
-fitBetaUniformParameters <- function(pVals, nStarts = 10L){
+fitBetaUniformParameters <- function(pVals, nStarts = 5L){
   
   validateSingleInteger(nStarts)
   assert_that(all(is.pval(na.omit(pVals))), msg = "Expecting P-values as input")
   
-  #Fit beta-uniform distribution from a number of random starting points
-  fittedBetaUniformModelParam_manyRun <-  map(1:nStarts,
-                                              ~ tryCatch({ fitMod <- fitdistr(na.omit(pVals),
-                                                                              betaUniformDensity,
-                                                                              start = list(a = runif(1, min = 1E-5, max = 3), 
-                                                                                           lambda = runif(1, min = 1E-5, max = 1-1E-5) ),
-                                                                              lower = c(1E-5, 1E-5),
-                                                                              upper = c(3, 1-1E-5),
-                                                                              method = "L-BFGS-B")},
-                                                         error = function(e){
-                                                           NAlogLik <- list(estimate = as.numeric(c(a = NA, lambda = NA)),
-                                                                            sd = as.numeric(c(a = NA, lambda = NA)),
-                                                                            vcov = matrix(c(0,0,0,0),nrow = 2, dimnames = list(c("a","lambda"),c("a","lambda"))),
-                                                                            loglik = as.numeric(NA),
-                                                                            n = as.integer(NA))
-                                                           class(NAlogLik) <- "fitdistr"
-                                                           return(NAlogLik)} ) )
+  epsilon <- 1E-5
+
+  #If the user has not registered a paralel backend, register a sequential backend
+  if(!getDoParRegistered()){ registerDoSEQ() }
   
-  bestFit <- which.max(map_dbl(fittedBetaUniformModelParam_manyRun, logLik))
+  #Fit beta-uniform distribution from a number of random starting points  
+  fittedBetaUniformModelParam_manyRun <- foreach(i = 1:nStarts,
+                                                 .errorhandling = "pass",
+                                                 .packages = "MASS",
+                                                 .export = c("betaUniformDensity","epsilon") ) %dopar% {
+                  fitdistr(na.omit(pVals),
+                          betaUniformDensity,
+                          start = list(a = runif(1, min = epsilon, max = 3), 
+                                       lambda = runif(1, min = epsilon, max = 1-epsilon) ),
+                          lower = c(epsilon, epsilon),
+                          upper = c(3, 1-epsilon),
+                          method = "L-BFGS-B") }
   
+  failedOptimisationRuns <- ( sapply(fittedBetaUniformModelParam_manyRun, class) != "fitdistr" )
+  
+  modelLLHs <- sapply(fittedBetaUniformModelParam_manyRun[!failedOptimisationRuns], logLik)
+
+  bestFit <- which.max(modelLLHs)
   if (length(bestFit) == 0) { stop("Beta-Uniform model could not be fitted to data") }
+  if(sd(modelLLHs) > 5) warning("log-likelihoods are very diverse - it might be worth increasing the 'nStarts' parameter.")
   
-  fittedBetaUniformModelParam <- fittedBetaUniformModelParam_manyRun[[bestFit]]
+  fittedBetaUniformModelParam <- pValFits[[bestFit]]
   
-  fb <- list(a = coef(fittedBetaUniformModelParam)["a"] %>% as.numeric,
-             lambda = coef(fittedBetaUniformModelParam)["lambda"] %>% as.numeric,
-             pvalues = pVals,
-             negLL = logLik(fittedBetaUniformModelParam)[1] %>% as.numeric)
+  fb <- list(a = coef(fittedBetaUniformModelParam)["a"],
+             lambda = coef(fittedBetaUniformModelParam)["lambda"],
+             pvalues = na.omit(lymphPvals$pValue_diffex),
+             negLL = logLik(fittedBetaUniformModelParam)[1]) 
+  
+  fb %<>% lapply(as.numeric)
   class(fb) <- "bum"
   
-  if( isTRUE(all.equal(fb$a, 1E-5, tolerance = 1E-4)) | isTRUE(all.equal(fb$a, 3, tolerance = 1E-4)) |
-      isTRUE(all.equal(fb$lambda, 1E-5, tolerance = 1E-4)) | isTRUE(all.equal(fb$lambda, 1-1E-5, tolerance = 1E-4)) ){
+  #Inspect fb for whether any parameters lie on extremas
+  if( isTRUE(all.equal(fb$a, epsilon, tolerance = epsilon)) |
+      isTRUE(all.equal(fb$a, 3, tolerance = epsilon)) |
+      isTRUE(all.equal(fb$lambda, epsilon, tolerance = epsilon)) |
+      isTRUE(all.equal(fb$lambda, 1-epsilon, tolerance = epsilon)) ){
     
     warning("One or both parameters are on the limit of the defined parameter space")
   }
@@ -68,6 +79,7 @@ fitBetaUniformParameters <- function(pVals, nStarts = 10L){
   return(fb)
 }
 
+#' @export
 print.bum <- function (x, ...) {
   
   cat("Beta-Uniform-Mixture (BUM) model\n\n")
