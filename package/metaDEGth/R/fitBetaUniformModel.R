@@ -36,7 +36,7 @@ fitBetaUniformParameters <- function(pVals, nStarts = 5L){
   #If the user has not registered a paralel backend, register a sequential backend
   if(!getDoParRegistered()){ registerDoSEQ() }
   
-  #Fit beta-uniform distribution from a number of random starting points  
+  #Fit beta-uniform distribution from a number of random starting points
   fittedBetaUniformModelParam_manyRun <- foreach(i = 1:nStarts,
                                                  .errorhandling = "pass",
                                                  .packages = "MASS",
