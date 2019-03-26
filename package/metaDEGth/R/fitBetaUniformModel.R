@@ -6,16 +6,14 @@
 #' 
 #' Designed to be a drop-in replacement for BioNet::fitBumModel.
 #' 
-#' Note that this function can make use of parallel backends (set up and registered by the user outside of this function) from the doParallel package. See doParallel::registerDoParallel.
-#' 
 #' @param pVals A numeric vector of P-values for which to perform Beta-Uniform decomposition
-#' @param nStarts How many repeats of the fitting routine should the routine run? The default is 5, but in some cases (when there is no 'clean' P-value distribution), it might be worth running for more iterations.
+#' @param nStarts How many repeats of the fitting routine should the routine run before the best LLH is picked? The default is 10, but in some cases (when there is no 'clean' P-value distribution), it might be worth running for more iterations.
 #' @return fb A list of three components: a - the shape parameter, lambda - the mixture parameter and negLL - the negative log-likelihood of the data under the model
 #' @importFrom MASS fitdistr
 #' @importFrom stats na.omit coef logLik
-#' @import foreach
+#' @importFrom purrr map possibly
 #' @export
-#' @seealso betaUniformScore BioNet::fitBumModel doParallel::registerDoParallel
+#' @seealso betaUniformScore BioNet::fitBumModel
 #' 
 #' @examples 
 #' data(pvalues)
@@ -26,43 +24,39 @@
 #' betaUnifScored <- betaUniformScore(pvalues$pValue_diffex, fbMod, FDR = 0.01) - 1
 #' 
 #' @references Pounds, S., & Morris, S. W. (2003). Estimating the occurrence of false positives and false negatives in microarray studies by approximating and partitioning the empirical distribution of p-values. Bioinformatics
-fitBetaUniformParameters <- function(pVals, nStarts = 5L){
+fitBetaUniformMixtureDistribution <- function(pVals, nStarts = 10L){
   
   validateSingleInteger(nStarts)
-  assert_that(all(is.pval(na.omit(pVals))), msg = "Expecting P-values as input")
+  assert_that(all(is.pval(na.omit(pVals))), msg = "Expecting P-values as input") #TODO - replace with a proper validator
   
   epsilon <- 1E-5
 
-  #If the user has not registered a paralel backend, register a sequential backend
-  if(!getDoParRegistered()){ registerDoSEQ() }
+  #Fit beta-uniform distribution from a number of uniform random starting points. We need to wrap the method safely  
+  optimiseBetaUniformParams <- possibly(
+    ~ fitdistr(x = na.omit(pVals), densfun = betaUniformDensity,
+               start = list(a = runif(1, min = epsilon, max = 3), 
+                            lambda = runif(1, min = epsilon, max = 1-epsilon) ),
+               lower = c(epsilon, epsilon), upper = c(3, 1-epsilon),
+               method = "L-BFGS-B") ,
+    otherwise = NA_real_ )
   
-  #Fit beta-uniform distribution from a number of random starting points
-  fittedBetaUniformModelParam_manyRun <- foreach(i = 1:nStarts,
-                                                 .errorhandling = "pass",
-                                                 .packages = "MASS",
-                                                 .export = c("betaUniformDensity","epsilon") ) %dopar% {
-                  fitdistr(na.omit(pVals),
-                          betaUniformDensity,
-                          start = list(a = runif(1, min = epsilon, max = 3), 
-                                       lambda = runif(1, min = epsilon, max = 1-epsilon) ),
-                          lower = c(epsilon, epsilon),
-                          upper = c(3, 1-epsilon),
-                          method = "L-BFGS-B") }
+  fittedBetaUniformModelParams <- map(1:nStarts, optimiseBetaUniformParams)
+
+  failedOptimisationRuns <- ( sapply(fittedBetaUniformModelParams, class) != "fitdistr" )
   
-  failedOptimisationRuns <- ( sapply(fittedBetaUniformModelParam_manyRun, class) != "fitdistr" )
-  
-  modelLLHs <- sapply(fittedBetaUniformModelParam_manyRun[!failedOptimisationRuns], logLik)
+  modelLLHs <- sapply(fittedBetaUniformModelParams[!failedOptimisationRuns], logLik)
 
   bestFit <- which.max(modelLLHs)
   if (length(bestFit) == 0) { stop("Beta-Uniform model could not be fitted to data") }
   if(sd(modelLLHs) > 5) warning("log-likelihoods are very diverse - it might be worth increasing the 'nStarts' parameter.")
   
-  fittedBetaUniformModelParam <- pValFits[[bestFit]]
+  bestFittedBetaUniformModelParam <- fittedBetaUniformModelParams[[bestFit]]
   
-  fb <- list(a = coef(fittedBetaUniformModelParam)["a"],
-             lambda = coef(fittedBetaUniformModelParam)["lambda"],
-             pvalues = na.omit(lymphPvals$pValue_diffex),
-             negLL = logLik(fittedBetaUniformModelParam)[1]) 
+  #Build an object compatible with BioNet's beta-uniform model class
+  fb <- list(a = coef(bestFittedBetaUniformModelParam)["a"],
+             lambda = coef(bestFittedBetaUniformModelParam)["lambda"],
+             pvalues = na.omit(pVals),
+             negLL = logLik(bestFittedBetaUniformModelParam)[1]) 
   
   fb %<>% lapply(as.numeric)
   class(fb) <- "bum"
