@@ -108,7 +108,11 @@ pvalHist <- function(DT,pValAttr = "P.Value", fitBetaUniform = TRUE, outputParam
 #' @importFrom stats dbeta
 betaUniformDensity <- function(x, a, lambda){
   
-  (1-lambda)*dbeta(x,a,1) + lambda*dbeta(x,1,1)
+  # The beta-uniform decomposition could be written:
+  # (1-lambda)*dbeta(x,a,1) + lambda*dbeta(x,1,1)
+  
+  #However, dbeta =1 everywhere, so there is no point wasting computation.
+  (1-lambda)*dbeta(x,a,1) + lambda
 }
 
 #' Quantile function for Beta-uniform model
