@@ -15,28 +15,36 @@ bibliography: bibliography.bib
 link-citations: yes
 ---
 
+```{r, include=FALSE}
+options(tinytex.verbose = TRUE)
+```
+
 # Abstract
 
 # Introduction
 
 # Methods
 
-A constitutional principle in frequentist hypothesis testing is that repeated sampling of data under any appropriately chosen null-hypothesis ($H_{0}$) should result in a uniform P-value distribution. This follows directly from the interpretation of a P-value as the probability of witnessing the same result as the data or greater under the null-distribtution; if the data were drawn from that same null-distribution, then the process becomes a circular excercise in cumulative distribution functions. Fisher showed in the 1920's[@Fisher1925-hl] that one could perform a meta-analysis of a series of independent hypothesis-tests bearing on the same $H_{0}$ through study of the log-sum of P-values, making use of their uniformity under the null-distribution.
+A central theorem within frequentist hypothesis testing is that repeated sampling of data under any appropriately chosen null-hypothesis ($H_{0}$) should result in a uniform P-value distribution. This follows directly from the fact a P-value is the probability of witnessing the same result as the data or greater under the null-distribtution; if the data were drawn from that same null-distribution, then the process becomes a circular excercise in cumulative distributions. Fisher showed in the 1920's[@Fisher1925-hl] that one could perform a meta-analysis of a series of independent hypothesis-tests bearing on the same $H_{0}$ through study of the sum of log-transformed P-values, making use of their uniformity under the null-distribution.
 
 Let $X$ be a uniform random variable.
 $$X \sim U \left(0,1 \right)$$
 It follows from inverse transform sampling that:
 
-$$Y = -2log(X) \sim exp(1/2) \sim \chi^2_{2}$$
+$$Y = -2log(X) \sim \exp \left( 1/2 \right) \sim \chi^2_{2}$$
 More generally, for multiple uniform random variables, their sum can be modelled as though drawn from a Chi-squared distribution with an appropriate number of degrees of freedom.
 
-$$Y_{n} = \sum^n_{i} -2log(X_{i}) \sim \Gamma(n,2) = \chi^2_{2n}$$
+$$Y_{n} = \sum^n_{i} -2log(X_{i}) \sim \sum_i^n  \exp \left( 1/2 \right)  = \Gamma(n,2) = \chi^2_{2n}$$
 
 Hence a set of $k$ independent P-values can be used for a set-wise test using a $\chi^2_{2k}$ distribution. However, statistical tests are typically correlated and hence not independent
 
-*TODO* Demonstrate the progression from thresholded P-values to continuous scores (using Fisher's exact)
+*TODO* Talk of GAGE method within bioinformatics.
 
-*TODO* Talk of GAGE method
+*TODO* Morris & Pounds show that P-values under a null can be described by a beta distribution [@Pounds2003-tm]. 
+- Show equivilence to Q-value interpretation
+
+
+*TODO* Demonstrate the progression from thresholded P-values to continuous scores (using Fisher's exact)
 
 *TODO* Talk of EBM Knijnenburg(2016)
 
@@ -45,19 +53,21 @@ Hence a set of $k$ independent P-values can be used for a set-wise test using a 
 *TODO* Include a comparison with GSEA/Wilcox (Jonny's recommendations)
 
 *TODO* P-values are not independent. Dimitris suggests that one can use the approach of Galwey 2009
+- Probably worth talking abou the practical guide to multiple hypothesis tests [@Korthauer2018-bu]
 
 # Results
 
 *TODO* Find some exemplar datasets to run on
-  - DREAM datasets? TFs
-  - Spike studies - e.g. siRNA knockdowns of TF (GSE73555 is for a cofactor)
-  - Gene sets; drugs with known MoA (use PharmaKB)
+  - DREAM datasets? TF knockdowns.
+  - Spike studies - e.g. siRNA knockdowns of TF (GSE73555 is for a cofactor, so we should expect to see)
+  - Gene sets; drugs with known MoA (use PharmaKB). An EGFR inhibitor would seem appropriate here. One of the evolved resitance studies? We strongly suspect that FGFR is important.
   - Gene sets; biological systems with suspected action (ENCODE development datasets?)
-  - TCGA data from EBM paper Knijnenburg(2016)
+  - TCGA data from EBM paper Knijnenburg (2016)
 
 ## Theoretical studies
 
 *TODO* Demonstrate inflation of false positives when there is any kind of signal in the underlying dataset
+- Emphasise that whilst one cannot say which data set is a false positive, you *can* state with certainty that they are whith 
 
 *TODO* There is a problem that $H_{0}$ is not the same across all genes - but we can treat it as a mixture distribution
 
@@ -67,4 +77,4 @@ Hence a set of $k$ independent P-values can be used for a set-wise test using a 
 
 # Conclusions
 
-*TODO* Cheap to compute and easy to run
+*TODO* Cheap to compute and easy to run. Well founded in probability theory.
