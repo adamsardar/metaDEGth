@@ -108,19 +108,27 @@ pvalHist <- function(DT,pValAttr = "P.Value", fitBetaUniform = TRUE, outputParam
 #' @importFrom stats dbeta
 betaUniformDensity <- function(x, a, lambda){
   
-  # The beta-uniform decomposition could be written:
+  # The beta-uniform decomposition can be written as a micture distribution:
   # (1-lambda)*dbeta(x,a,1) + lambda*dbeta(x,1,1)
   
-  #However, dbeta =1 everywhere, so there is no point wasting computation.
-  (1-lambda)*dbeta(x,a,1) + lambda
+  #However, beta(1,1) = uniform() = 1 everywhere, so there is no point wasting computation.
+  #(1-lambda)*dbeta(x,a,1) + lambda
+  
+  # Further, the beta-distribution simplifies to a Kumaraswamy distribution when one of the Beta distribution parameters is unity. This is an order of magnitude faster than the first mixture distribution
+  # See https://en.wikipedia.org/wiki/Kumaraswamy_distribution
+  return((1-lambda)* a * x^(a-1)  + lambda)
 }
 
 #' Quantile function for Beta-uniform model
 #' @references Pounds, S., & Morris, S. W. (2003). Estimating the occurrence of false positives and false negatives in microarray studies by approximating and partitioning the empirical distribution of p-values. Bioinformatics
 #' @importFrom stats qbeta
 qbetaUniformFunc <- function(p, a, lambda){
+ 
+ # A simple translation of the beta-uniform mixture distribution 
+ # (1-lambda)*qbeta(p,a,1) + lambda*qbeta(p,1,1)
   
-  (1-lambda)*qbeta(p,a,1) + lambda*qbeta(p,1,1)
+ # This simplifies substatially. Beta(1,1) = Unif(), and the CDF of uniform at x is x. Beta(a,1) is Kumaraswamy(a,1), whose CDF is 1-(1-x)^a.
+ return( (1-lambda)*(1 - (1-p^a)) + lambda*p )
 }
 
 #' Upper bound on Uniform component of Beta-uniform model
@@ -128,5 +136,9 @@ qbetaUniformFunc <- function(p, a, lambda){
 #' @importFrom stats dunif
 uniformComponentFunc <- function(x, a, lambda){
   
-  (lambda +    (1-lambda)*a)*dunif(x)
+  # A literal translation of the maths from Morris & Pounds would be:
+  # ((1-lambda)*a + lambda)*dunif(x)
+  
+  # But dunif is 1 everywhere (in the bounds) by definition.
+  return( ((1-lambda)*a + lambda) )
 }
