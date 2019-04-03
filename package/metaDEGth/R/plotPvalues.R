@@ -108,10 +108,10 @@ pvalHist <- function(DT,pValAttr = "P.Value", fitBetaUniform = TRUE, outputParam
 #' @importFrom stats dbeta
 betaUniformDensity <- function(x, a, lambda){
   
-  # The beta-uniform decomposition can be written as a micture distribution:
+  # The beta-uniform decomposition can be written as a mixture distribution:
   # (1-lambda)*dbeta(x,a,1) + lambda*dbeta(x,1,1)
   
-  #However, beta(1,1) = uniform() = 1 everywhere, so there is no point wasting computation.
+  #However, dbeta(1,1) = duniform() = 1 everywhere, so there is no point wasting computation.
   #(1-lambda)*dbeta(x,a,1) + lambda
   
   # Further, the beta-distribution simplifies to a Kumaraswamy distribution when one of the Beta distribution parameters is unity. This is an order of magnitude faster than the first mixture distribution
