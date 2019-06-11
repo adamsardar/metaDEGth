@@ -1,5 +1,0 @@
-Include simulation data
-Include test data-sets
-Add C++ code for fitting Beta-Uniform decomposition (test against BioNet or base R)
-Add code for gamma-based tests
-- Flag to run against a 'pure' noise model
