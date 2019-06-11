@@ -18,7 +18,7 @@
 #' @examples 
 #' data(pvalues)
 #' 
-#' fbMod <- fitBetaUniformParameters(pvalues$pValue_diffex)
+#' fbMod <- fitBetaUniformMixtureDistribution(pvalues$pValue_diffex)
 #' 
 #' #Note that you must subtract one from the bayes-factor in order to achieve equivilence with BioNet::scoreNodes
 #' betaUnifScored <- betaUniformScore(pvalues$pValue_diffex, fbMod, FDR = 0.01) - 1
@@ -50,7 +50,7 @@ fitBetaUniformMixtureDistribution <- function(pVals, nStarts = 10L){
   if (length(bestFit) == 0) { stop("Beta-Uniform model could not be fitted to data") }
   if(sd(modelLLHs) > 5) warning("log-likelihoods are very diverse - it might be worth increasing the 'nStarts' parameter.")
   
-  bestFittedBetaUniformModelParam <- fittedBetaUniformModelParams[[bestFit]]
+  bestFittedBetaUniformModelParam <- fittedBetaUniformModelParams[!failedOptimisationRuns][[bestFit]]
   
   #Build an object compatible with BioNet's beta-uniform model class
   fb <- list(a = coef(bestFittedBetaUniformModelParam)["a"],
