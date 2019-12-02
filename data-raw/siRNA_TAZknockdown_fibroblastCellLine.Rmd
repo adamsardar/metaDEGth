@@ -1,0 +1,239 @@
+---
+title: 'RNAseq differential expression example: siRNA knockdown of TAZ'
+author: "Adam Sardar"
+date: "12 October 2018"
+output: html_document
+---
+
+With the plummeting costs of transcriptomic profiling by RNAseq, such datasets are appearing in increasing abundance on GEO. Turning these data into useful insight occurs in two stages:
+- first, we must download and align short DNA reads against a model of the target genome (typically human) so as to estimate transcript abundance (literally how many copies of each gene transcript/splice-isoform are there)
+- second, we need to read in the transcript abundance per sample, aggregate to the gene-level, fit a regularised linear model of gene expression and then perform differential expression analysis based on the study design
+
+A separate workbook will be produced to a guide a user through the first stage; read alignment. Suffice to say that for 99% of cases, this first stage is best performed using a pseudo-alignment tool such as [Kallisto](https://github.com/pachterlab/kallisto), which uses counts of sub-strings in common between reads and reference gene sequences. An example for GSE73555 is present on the scratch drive under RNAseqExamples/GSE73555 and will form the basis of this workbook. You can also inspect the file 'command.log' to view a record of how these data were generated.
+
+# About GEO study GSE73555
+
+GSE73555: Genes regulated by TAZ transcription co-factor in a lung fibroblast cell line; an RNAseq dataset (Ion Torrent). [Here's a link to the paper](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5307361/)
+
+This is a pretty interesting experiment; the study authors used [siRNA](https://en.wikipedia.org/wiki/Small_interfering_RNA) to knock down the [TAZ](https://www.genecards.org/cgi-bin/carddisp.pl?gene=WWTR1) gene. TAZ operates a transcription co-activatoon and the protein contains a PDZ binding linear motif (probably somewhere within its disordered regions http://d2p2.pro/view/sequence/up/Q9GZV5), which is likely PPI partner. This GEO dataset describes a knock-out experiment performed in a lung fibroblast cell line; two different siRNA's for TAZ and a negative control (NTC) siRNA.
+
+# Data import
+
+We shall use the `tximport` package to read in the transcript estimate data and then the `limma-voom` pipeline to process it. Such a procedure is advised in a comprehensive [benchmarking study from 2016](https://www.biorxiv.org/content/early/2016/06/10/058164).
+
+First we will need a transcript-to-gene mapping. This can actually be extracted directly from the cDNA file (a catalogue of all of the coding regions in the genome), downloadable [directly from enseml](http://www.ensembl.org/info/data/ftp/index.html). On a Linux machine, one can simply use the first `fread` command and do a bit of text manipulation on the fly using command line tools. No such luck on windows, but I have prepared a file 'ENSG2ENSTmap.tsv' in the datasources directory corresponding to the most recent build of the human genome, GRCh38.
+
+```{r import transcript to gene mapping}
+
+library(data.table)
+
+#Suck out the ENST to ENSG mapping from the GTF file
+#tx2gene <- fread('zcat GRCh38/Homo_sapiens.GRCh38.cdna.all.fa.gz | grep "^>" | perl -pe "s/(>|chromosome:|gene:|GRCh38:|gene_biotype:|transcript_biotype:)//g" ',                  header = FALSE)
+
+
+#TODO import transcript to gene mapping
+ENST2ENSG 
+
+colnames(ENST2ENSG) <- c("ENST","havanaStatus","chomasome","ENSG","geneStatus","geneStatus")
+```
+
+We are dealing with SRP064305, so we shall load the short-read metadata files directly from SRA and then download and extract the sample annotation from GEO before merging them together into a single table.
+
+```{r transcript abundance counts}
+
+library(GEOquery)
+library(purrr)
+library(stringr)
+library(magrittr)
+
+SRP064305details <-  fread("http://trace.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?save=efetch&db=sra&rettype=runinfo&term=SRP064305")
+
+parsedSOFT <- getGEO(GEO = "GSE73555", GSEMatrix = FALSE, AnnotGPL = FALSE, getGPL = FALSE)
+
+# This is a data cleanup step. "Hell is other people's data"
+GSMdetails <- map_dfr(parsedSOFT@gsms,
+        ~ {sampleAttr <- .x@header$characteristics_ch1
+           DT <- structure(sampleAttr %>% str_extract("[^:]+$") %>% 
+                             str_remove_all("\\s+") %>%
+                             str_remove_all("#"),
+                    names = sampleAttr %>% str_extract("^[^:]+")) %>% 
+            as.list %>%
+            as.data.table
+            return(DT)}  )
+
+setnames(GSMdetails, str_remove(colnames(GSMdetails),"\\s+"))
+
+suppressWarnings(GSMdetails[,GSM := names(parsedSOFT@gsms)]) #An fivolous warning about nothing important might crop up, so with supress it
+
+GSMdetails[SRP064305details,
+           Run := Run,
+           on = .(GSM == SampleName)]
+
+GSMdetails
+```
+
+The end result is a table that maps together a SRR sample (the reads downloaded from SRA) with the experimental condition; which siRNA was used in this case.
+
+n.b. if the data.table syntax is confusing above, I suggest that you arm yourself with [Dirk Eddelbuettel's excellent 8-page R guide, which covers much of the introductory data.table syntax](https://eddelbuettel.github.io/gsir-te/Getting-Started-in-R.pdf) 
+
+# Setting up the design matrix
+
+The cornerstone of a linear model regression is the [design matrix](https://en.wikipedia.org/wiki/Design_matrix) - aka Model Matrix. It relates samples to experimental conditions in the experimental study; in this case, TAZ siRNA 1, TAZ siRNA 2 and control siRNAs.
+
+Luckily, base R has a helpful method `?model.matrix` to assist in the construction of such matrices.
+
+```{r Prepare design matrix}
+
+designMat <- model.matrix(~ 0 + transfection, data = GSMdetails)
+colnames(designMat) %<>% str_remove("transfection") # model.matrix keeps all of the condition information in the column headings. This is useful when there are many covariates, but in this case short titles are preffered.
+row.names(designMat) <- GSMdetails[,GSM]
+
+designMat
+```
+
+The design matrix is very simple in this case - a 1 when a sample is in a condition, 0 otherwise. One might anticipate a more complex design matrix when we are studying samples from patients with other features (aka covariates) that we wish to account for (gender, age etc.) in which case the design matrix wouldn't be just ones and zeros and there could be more than one entry per row. Such examples are beyond the scope of this tutorial.
+
+# Importing transcript data
+
+```{r limma voom meanVariance trend}
+
+library(limma)
+library(edgeR)
+library(tximport)
+
+projDir <- ifelse("/tmp/GSE73555/")
+
+# Each kallisto alignment run produces a director (labelled by the SRR ID), with an hdf5 file
+# We shall add a column with file locations to our experimental details table
+GSMdetails[,path := str_c(projDir,"kalistoAlign/",Run,"/abundance.h5")]
+
+# Notice that we pass in a transcript to gene mapping (tx2gene) and that we normalise TPM. See tximport documentation for more details
+kallistoTranscriptEstimates <- tximport(files = GSMdetails[, path],
+                                        type = "kallisto",
+                                        tx2gene = ENST2ENSG[,.(ENST,ENSG)],
+                                        countsFromAbundance = "lengthScaledTPM",
+                                        dropInfReps = TRUE)
+
+# A function for computing the geometic mean of a series of observation
+# See https://en.wikipedia.org/wiki/Geometric_mean
+gm_mean = function(x, na.rm=TRUE){ exp(sum(log(x[x > 0]), na.rm=na.rm) / length(x)) }
+
+geneAbundances <- data.table(ENSG = row.names(kallistoTranscriptEstimates$abundance),
+                          gm_abundance = apply(kallistoTranscriptEstimates$abundance, 1, gm_mean) )
+
+# Low quantified transcripts/genes can introduce strange artifacts. Filter these out with a very, very low cutoff. We only want to remove the lowest expressed genes
+transcriptDGElist <- kallistoTranscriptEstimates$counts %>% 
+  .[ geneAbundances[gm_abundance > 1.01, ENSG], ] %>%
+  DGEList
+transcriptDGElist %<>% calcNormFactors
+```
+
+
+## Heteroskedascity - AKA 'how I learned to stop worrying and love the variance stabilising transform'
+
+An important difference between micro-array and next-generation sequencing data is that the gene expression measurements have a property called 'over-dispersion', where the standard deviation of a dataset is greater than one might expect given typical statistical models. In short, there is a non-trivial mean-variance trend (i.e. the variance/standard deviation is not easily predicted from the mean alone, so we must introduce additional parameters to the model). This non-constant behaviour of variance in the data is a property called 'heteroskedascity' (in contrast with 'homoskedascity', where the variance relationship is constant).
+
+Approaches in the field have gravitated around two methods; 1.) a very detailed generalised linear modeling framework with an additional parameter for the over-dispersion, 2.) fitting an empirical mean-variance trend and subtracting it from the data before running more standard linear modeling routines. The first of these options is the approach employed by packages such as edgeR and DESeq whereas the second lies behind limma-voom (which is written by the same author as edgeR) and has proven to be considerably faster and more reliable, robust and accurate in estimating differential expression. I use limma-voom and I believe that the field is moving towards a [consensus on this topic](https://twitter.com/lpachter/status/876913986473648128).
+
+The next step in our pipeline is to estimate the mean-variance trend (consult the voom help `?voom` for more details), and then to fit a linear model based on the design matrix that we built above.
+
+```{r voom modeling and fit}
+
+voomTrendModelFromCounts <- voom(transcriptDGElist, designMat, plot = TRUE)
+
+GSE73555_fit <- lmFit(voomTrendModelFromCounts, designMat)
+```
+
+The limma function `lmFit` produce a linear model for each gene in each condition; i.e. it estimates expression for each gene across the conditions specified in the design matrix.
+
+# Contrast matricies and comparing estimated coefficients
+
+A contrast matrix is a means of specifying what design matrix conditions we would like to compare against one-another. In GSE37555, the contrasts are simple: 1.) control siRNA vs TAZ siRNA 1 and 2.)  control siRNA vs TAZ siRNA 2. Each contrast is specified column-wise in a labelled fashion: a -1 and 1 entry detailing the comparator and comparative - this is critical in determining the direction of fold change (the control condition should typically be assigned as -1). You can name the columns whatever you like, but do not use any special characters or spaces.
+
+```{r Contrast matrix}
+
+contrastMat <- matrix(0, 
+                      ncol = 2,
+                      nrow = ncol(designMat), 
+                      dimnames = list(colnames(designMat), c("knockdownTAZ1","knockdownTAZ2")))
+
+contrastMat["siNTC",] <- -1
+contrastMat["siTAZ1", "knockdownTAZ1"] <- 1
+contrastMat["siTAZ2", "knockdownTAZ2"] <- 1
+
+contrastMat
+```
+
+In this workbook, we shall only process knockdownTAZ1 (feel free to process knockdownTAZ2 - the procedure will be identical).
+
+The linear model fit using `lmFit` contains estimates for the expression of each gene in each condition. The contrast matrix specifies the way in which we would like to compare these conditions. These two objects can be combined using contrasts.fit and then cleverly adjusted for having a relatively small number of samples (6: 2 in each condition) but tens of thousands of genes to estimate bulk properties of gene expression across those samples; important statistical quantities are moderated towards a global average or trend, greatly increasing the power of downstream tests. This routine is known as 'shrinkage' and is well described in the literature. 
+
+limma has two techniques for estimating differential expression using shrinkage. The first is `eBayes`, which can be used before `topTable` to estimate differential expression log2 fold-change, (adjusted) P-values against a null-hypothesis of no change in expression (logFC = 0) and the log-odds (B). The second is `treat` before `topTreat` which, akin to `eBayes`, also computes log2 fold change but instead computes a P-value for a test of log fold change being outside an interval of ± delta, where delta is chosen to wean out small, uninteresting changes (I use log2(1.2) in the block below). Both of these pieces of information are useful, so we shall merge them together.
+
+```{r Extract coefficient comparisons}
+
+GSE73555_allContrast <- contrasts.fit(GSE73555_fit, contrasts = contrastMat)
+
+# Produce a table of differential expression using eBayes and relabel the gene label column
+siTAZdiffex_DT <- eBayes(GSE73555_allContrast) %>% 
+  topTable(coef = "knockdownTAZ1", adjust.method = "fdr", number = Inf) %>%
+  data.table(keep.rownames = TRUE)
+
+setnames(siTAZdiffex_DT, "rn", "ENSG")
+
+# Produce a table of differential expression by treat (i.e. against an interval)
+siTAZintervalComparison_DT <- treat(GSE73555_allContrast, lfc = log2(1.2)) %>% 
+  topTreat(coef = "knockdownTAZ1", adjust.method = "fdr", number = Inf) %>%
+  data.table(keep.rownames = TRUE)
+
+setnames(siTAZintervalComparison_DT, "rn", "ENSG")
+setnames(siTAZintervalComparison_DT, "P.Value", "pVal_GTEabsLFC1.5")
+
+siTAZdiffex_DT[siTAZintervalComparison_DT, pVal_GTEabsLFC1.5 := pVal_GTEabsLFC1.5, on = "ENSG"]
+siTAZdiffex_DT[, qVal_GTEabsLFC1.5 := p.adjust(pVal_GTEabsLFC1.5 ,method = "fdr")]
+
+
+siTAZdiffex_DT
+```
+
+# Volcano plot
+
+A so-called volcano plot is a way of succinctly summarising effect size and significance of genes in a differential expression study. I use them as a means of quality control of an experiment - you can easily see if a fit has gone wrong, but it's hard to conclude much more from them.
+
+```{r Create volcano plot}
+
+library(ggplot2)
+
+siTAZdiffex_DT %>%
+    ggplot(aes(x = logFC, y = -log10(pVal_GTEabsLFC1.5),
+               colour = (qVal_GTEabsLFC1.5 < 0.01),
+               shape = (qVal_GTEabsLFC1.5 < 0.01) ) ) +
+    geom_point(size = 2) +
+    theme_bw() +
+    scale_color_discrete(name = "qValue < 0.01") +
+    scale_shape(guide = FALSE) +
+    scale_x_continuous(breaks = seq(-10,10,1)) +
+    scale_y_continuous(breaks = seq(0,20,0.5)) +
+    labs(x = "log2(fold change)", y = "-log10(P-value) [alt. hyp.: abs(logFC) >= 1.2]",
+         title = str_c("Differential expression for TAZ siRNA knockdown study"),
+         subtitle = "Data drawn from GSE73555: TAZ knockdown in lung fibroblast cell line")
+  
+```
+
+# (optional) Mapping ENSG ids to other gene identifiers
+
+One of the worst things about bioinformatics is the plethora of gene IDs, symbols and the like. When dealing with a gene locus (which is what RNAseq reads are mapped to), we use ensemble IDs (ENSGXXXX).
+
+TODO - use uniprot mapping file to map IDs across
+
+```{r Gene mapping}
+
+
+#Write the results out to a file
+fwrite(siTAZdiffex_DT[order(pVal_GTEabsLFC1.5)],
+       file = "./resources/GSE73555_siTAZ1diffex.tsv", sep = "\t", quote = FALSE)
+
+siTAZdiffex_DT
+```
+
+What's at the top of the list? [Stanniocalcin](https://en.wikipedia.org/wiki/Stanniocalcin), which is a glycoprotein that controls calcium and phosphate - need I remind you that we are studying [fibrosis](https://www.nature.com/articles/srep18117).

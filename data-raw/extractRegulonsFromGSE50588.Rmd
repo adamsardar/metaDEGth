@@ -3,6 +3,8 @@ title: "Processing GSE50588 to produce validation sets"
 author: "Adam Sardar"
 date: "19 November 2018"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 # TODO detail motivation further
@@ -134,11 +136,13 @@ TF_siRNA_knockdowns_GSE50588_summary <- Reduce(function(x,y){x[y]}, TF_siRNA_kno
                                 .[GPL10558_annot_DT, , on = .(HumanHT12v4probeID == Probe_Id)]
 
 save(TF_siRNA_knockdowns_GSE50588_summary,
-     file = "../data/TF_siRNA_knockdowns_GSE50588_summary.RData",
+     file = "./data/TF_siRNA_knockdowns_GSE50588_summary.RData",
      compress = "xz")
 
 object.size(TF_siRNA_knockdowns_GSE50588_summary) %>% print(units = "Mb")
 
 ```
+
+# TODO 40Mb data files are far too big. Cull somehow.
 
 # TODO - a few volcano plots with some regulons highlighted
