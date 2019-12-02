@@ -83,24 +83,3 @@ print.bum <- function (x, ...) {
   cat(sprintf("log-likelihood:\t\t\t%.1f\n", -x$negLL))
 }
 
-#' Compute the adjusted log likelihood ratio score for beta-uniform model of P-values
-#' 
-#' Relative to some false discovery threshold, compute the relative ratio of probabilities and then take the natural logarithm.
-#' 
-#' Designed to be a drop-in replacement for the BioNet package scoreNodes function
-#' 
-#' @param fb The result of fitBetaUniformParameters method
-#' @param FDR The tolerable false discovery rate. See Morris & Pounds (2003)
-#' @param pVals Vector of P-values to score
-#' 
-#' @return betaUniformScores A vector of P-Value scores
-#' @export
-#' @importFrom stats pbeta
-#' @seealso fitBetaUniformParameters BioNet::scoreNodes
-#' @references Pounds, S., & Morris, S. W. (2003). Estimating the occurrence of false positives and false negatives in microarray studies by approximating and partitioning the empirical distribution of p-values. Bioinformatics
-betaUniformScore <- function(pVals, betaUniformFit, FDR = 5E-2){
-  
-  #TODO check betaUniformFit object via validator
-  
-  return(log( pbeta(pVals, betaUniformFit$a, 1), pbeta(rep(FDR, length(pVals)), betaUniformFit$a, 1)) - 1)
-}
