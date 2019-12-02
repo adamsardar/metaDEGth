@@ -13,7 +13,7 @@ LazyData: true
 Encoding: UTF-8
 Imports:
     data.table (>= 1.11.0),
-    assertthat (>= 1.1),
+    assertthat (>= 0.2),
     purrr (>= 0.2),
     magrittr (>= 1.5),
     stringr (>= 1.2)
