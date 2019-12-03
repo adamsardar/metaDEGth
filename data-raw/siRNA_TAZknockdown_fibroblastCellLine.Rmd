@@ -3,13 +3,15 @@ title: 'RNAseq differential expression example: siRNA knockdown of TAZ'
 author: "Adam Sardar"
 date: "12 October 2018"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 With the plummeting costs of transcriptomic profiling by RNAseq, such datasets are appearing in increasing abundance on GEO. Turning these data into useful insight occurs in two stages:
 - first, we must download and align short DNA reads against a model of the target genome (typically human) so as to estimate transcript abundance (literally how many copies of each gene transcript/splice-isoform are there)
 - second, we need to read in the transcript abundance per sample, aggregate to the gene-level, fit a regularised linear model of gene expression and then perform differential expression analysis based on the study design
 
-A separate workbook will be produced to a guide a user through the first stage; read alignment. Suffice to say that for 99% of cases, this first stage is best performed using a pseudo-alignment tool such as [Kallisto](https://github.com/pachterlab/kallisto), which uses counts of sub-strings in common between reads and reference gene sequences. An example for GSE73555 is present on the scratch drive under RNAseqExamples/GSE73555 and will form the basis of this workbook. You can also inspect the file 'command.log' to view a record of how these data were generated.
+This workbook assumes that user has already performed read alignment. For 99% of cases, this first stage is best performed using a pseudo-alignment tool such as [Kallisto](https://github.com/pachterlab/kallisto), which uses counts of sub-strings in common between reads and reference gene sequences. See command.log for a summary of the steps.
 
 # About GEO study GSE73555
 
@@ -27,14 +29,10 @@ First we will need a transcript-to-gene mapping. This can actually be extracted 
 
 library(data.table)
 
-#Suck out the ENST to ENSG mapping from the GTF file
-#tx2gene <- fread('zcat GRCh38/Homo_sapiens.GRCh38.cdna.all.fa.gz | grep "^>" | perl -pe "s/(>|chromosome:|gene:|GRCh38:|gene_biotype:|transcript_biotype:)//g" ',                  header = FALSE)
+#Suck out the ENST to ENSG (and gene Symbol) mapping from the GTF file, downloaded to /tmp/
+ENST2ENSG <- fread('zcat /tmp/Homo_sapiens.GRCh38.cdna.all.fa.gz | grep "^>" | perl -pe "s/(>|chromosome:|gene:|GRCh38:|gene_biotype:|transcript_biotype:|gene_symbol:)//g" | perl -ne "s/\\s+/\\t/g; CORE::say $_" | cut -f1-7 ' , header = FALSE, fill = TRUE)
 
-
-#TODO import transcript to gene mapping
-ENST2ENSG 
-
-colnames(ENST2ENSG) <- c("ENST","havanaStatus","chomasome","ENSG","geneStatus","geneStatus")
+colnames(ENST2ENSG) <- c("ENST","havanaStatus","chromosome","ENSG","geneStatus","geneStatus","genesymbol")
 ```
 
 We are dealing with SRP064305, so we shall load the short-read metadata files directly from SRA and then download and extract the sample annotation from GEO before merging them together into a single table.
@@ -63,7 +61,7 @@ GSMdetails <- map_dfr(parsedSOFT@gsms,
 
 setnames(GSMdetails, str_remove(colnames(GSMdetails),"\\s+"))
 
-suppressWarnings(GSMdetails[,GSM := names(parsedSOFT@gsms)]) #An fivolous warning about nothing important might crop up, so with supress it
+suppressWarnings(GSMdetails[,GSM := names(parsedSOFT@gsms)]) #A frivolous warning about nothing important might crop up, so with supress it
 
 GSMdetails[SRP064305details,
            Run := Run,
@@ -101,7 +99,7 @@ library(limma)
 library(edgeR)
 library(tximport)
 
-projDir <- ifelse("/tmp/GSE73555/")
+projDir <- "/mnt/c/GSE73555/"
 
 # Each kallisto alignment run produces a director (labelled by the SRR ID), with an hdf5 file
 # We shall add a column with file locations to our experimental details table
@@ -224,14 +222,16 @@ siTAZdiffex_DT %>%
 
 One of the worst things about bioinformatics is the plethora of gene IDs, symbols and the like. When dealing with a gene locus (which is what RNAseq reads are mapped to), we use ensemble IDs (ENSGXXXX).
 
-TODO - use uniprot mapping file to map IDs across
+TODO - add gene symbols to output
 
 ```{r Gene mapping}
 
 
-#Write the results out to a file
-fwrite(siTAZdiffex_DT[order(pVal_GTEabsLFC1.5)],
-       file = "./resources/GSE73555_siTAZ1diffex.tsv", sep = "\t", quote = FALSE)
+setorder(siTAZdiffex_DT, siTAZdiffex_DT$pVal_GTEabsLFC1.5)
+
+#Write the results out to a data file
+
+save(siTAZdiffex_DT, file = "./data/siTAZdiffex_DT.RData", compress = "xz")
 
 siTAZdiffex_DT
 ```
