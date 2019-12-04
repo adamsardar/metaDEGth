@@ -148,9 +148,7 @@ on_failure(validateNumericCutoff) <- function(call, env){ paste0(deparse(call$x)
 
 validatePvalues <- function(candidatePvalues){
   
-  assert_that(is.numeric(candidatePvalues),
-              all(candidateP >= 0),
-              (candidateP <= 1))
+  assert_that( all( is.pval(candidatePvalues), na.rm = TRUE) )
   
   invisible(candidatePvalues)
 }

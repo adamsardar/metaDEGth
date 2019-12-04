@@ -37,6 +37,9 @@ mixtureGammaTest <- function(testStat = NULL, nValues = NULL, geneSet = NULL, be
   return(combinedPval)
 }
 
+
+
+
 #' Combine multiple P-values together using Fisher's method
 #' 
 #' Fisher's method for combining P-values together consists of studying a test statistic of \eqn{T = \sum_i -log(P_i)} and 
@@ -49,7 +52,7 @@ mixtureGammaTest <- function(testStat = NULL, nValues = NULL, geneSet = NULL, be
 #' @param pVals A numerical vector of P-values
 #' @return combindedP A single p-value combining the results of multiple hypothesis tests into one
 #' @references \url{https://en.wikipedia.org/wiki/Fisher%27s_method}
-#' @references \url{https://en.wikipedia.org/wiki/Erlang_distribution#Related_distributions}
+#' @references \url{https://en.wikipedia.org/wiki/Erlang_distribution}
 #' @importFrom stats pgamma
 #' @export
 fishersCombindedProbabilityTest <- function(pVals){

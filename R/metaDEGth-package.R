@@ -5,6 +5,7 @@
 #' @author Adam Sardar
 #' @import data.table
 #' @import assertthat
+#' @import methods
 #' @importFrom magrittr "%<>%"
 #' @importFrom magrittr add
 NULL

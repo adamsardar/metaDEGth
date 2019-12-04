@@ -53,7 +53,7 @@ pvalHist <- function(DT,pValAttr = "P.Value", fitBetaUniform = TRUE, outputParam
   
   if(fitBetaUniform){
     
-    if(is.null(fb)){ fb <- fitBetaUniformParameters(DT[!is.na(get(pValAttr)),get(pValAttr)]) }
+    if(is.null(fb)){ fb <- fitBetaUniformMixtureDistribution(DT[!is.na(get(pValAttr)),get(pValAttr)]) }
     
     #Density function for Beta-uniform Model
     betaUniformConvFunc <- function(x){betaUniformDensity(x,fb$a,fb$lambda)}

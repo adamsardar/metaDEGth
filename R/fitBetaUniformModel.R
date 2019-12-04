@@ -4,7 +4,7 @@
 #' one with shape paramter (\eqn{\alpha}) of 1 - modelling noise under the null-hypothesis - and another with a variable (a), modelling
 #' signal. One can view this as modeling P-values as a random process where \eqn{P ~ (1-\lambda)\beta(a,1) + \lambda\beta(1,1)}
 #' 
-#' Designed to be a drop-in replacement for BioNet::fitBumModel.
+#' Analagous to BioNet::fitBumModel.
 #' 
 #' @param pVals A numeric vector of P-values for which to perform Beta-Uniform decomposition
 #' @param nStarts How many repeats of the fitting routine should the routine run before the best LLH is picked? The default is 10, but in some cases (when there is no 'clean' P-value distribution), it might be worth running for more iterations.
@@ -27,8 +27,8 @@
 fitBetaUniformMixtureDistribution <- function(pVals, nStarts = 10L){
   
   validateSingleInteger(nStarts)
-  assert_that(all(is.pval(na.omit(pVals))), msg = "Expecting P-values as input") #TODO - replace with a proper validator
-  
+  validatePvalues(pVals)
+
   epsilon <- 1E-5
 
   #Fit beta-uniform distribution from a number of uniform random starting points. We need to wrap the method safely  
@@ -36,7 +36,8 @@ fitBetaUniformMixtureDistribution <- function(pVals, nStarts = 10L){
     ~ fitdistr(x = na.omit(pVals), densfun = betaUniformDensity,
                start = list(a = runif(1, min = epsilon, max = 3), 
                             lambda = runif(1, min = epsilon, max = 1-epsilon) ),
-               lower = c(epsilon, epsilon), upper = c(3, 1-epsilon),
+               lower = c(epsilon, epsilon),
+               upper = c(3, 1-epsilon),
                method = "L-BFGS-B") ,
     otherwise = NA_real_ )
   
@@ -73,13 +74,5 @@ fitBetaUniformMixtureDistribution <- function(pVals, nStarts = 10L){
   return(fb)
 }
 
-#' @export
-print.bum <- function (x, ...) {
-  
-  cat("Beta-Uniform-Mixture (BUM) model\n\n")
-  cat(paste(length(x$pvalues), "pvalues fitted\n\n"))
-  cat(sprintf("Mixture parameter (lambda):\t%1.3f\n", x$lambda))
-  cat(sprintf("shape parameter (a): \t\t%1.3f\n", x$a))
-  cat(sprintf("log-likelihood:\t\t\t%.1f\n", -x$negLL))
-}
+
 
