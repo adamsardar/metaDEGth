@@ -2,7 +2,7 @@ Package: metaDEGth
 Type: Package
 Title: Combining differential expression P-values in a statistically consistent fashion whilst respecting background signal/noise trends
 Version: 1.0
-Date: 2018-11-06
+Date: 2019-12-04
 Authors@R: c(person("Adam", "Sardar", email = "adam@sardar.me.uk", role = c("aut", "cre")),
              person("Dimitris", "Vavavoulos", email = "dimitris.vavoulis@well.ox.ac.uk", role = c("aut")) )
 BugReports: https://github.com/adamsardar/metaDEGth/issues
