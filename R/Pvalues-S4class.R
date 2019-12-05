@@ -1,7 +1,8 @@
-# Simple classes that enforce 
-
+# Simple classes that enforce P-value type and logic
 setClass("Pvalues",
-         representation(.Data = "numeric"),
+         contains = "numeric",
+         representation(.Data = "numeric",
+                        names = "character"),
          validity = function(object){ return( all(is.pval( na.omit(object@.Data)) ) ) })
 
 setClass("Pvalue",

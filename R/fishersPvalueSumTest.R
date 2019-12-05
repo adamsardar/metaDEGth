@@ -9,14 +9,15 @@
 #' 
 #' Note that the use of this method for analysis of omics datasets was pioneered by Luo et al.
 #' 
-#' @param testPvalues A numerical vector of P-values to be tested
-#' @param ... Unused. Included to allow for similar form to betaUniformPvalueSumTest
-#' @return combindedP A single P-value combining the results of multiple independent hypothesis tests into one
-#' @references \url{https://en.wikipedia.org/wiki/Fisher%27s_method}
+#' @inheritParams betaUniformPvalueSumTest
+#' @return combinedPval A single P-value combining the results of multiple independent hypothesis tests into one
+#' @references \url{https://en.wikipedia.org/wiki/Fisher\%27s_method}
 #' @references \url{https://en.wikipedia.org/wiki/Erlang_distribution}
 #' @references Luo, W., Friedman, M. S., Shedden, K., Hankenson, K. D., & Woolf, P. J. (2009). GAGE: generally applicable gene set enrichment for pathway analysis. BMC Bioinformatics
 #' @importFrom stats pgamma
 #' @importFrom Biobase mkScalar
+#' @seealso betaUniformPvalueSumTest
+#' @family P-value sum tests
 #' @export
 setGeneric("fishersPvalueSumTest",
            signature = c("testPvalues"),
@@ -26,9 +27,9 @@ setGeneric("fishersPvalueSumTest",
 #' @describeIn fishersPvalueSumTest Convert to P-values on the fly
 setMethod("fishersPvalueSumTest",
           signature = c( testPvalues = "numeric"),
-          function(testPvalues, ...) callGeneric( new("Pvalues", testPvalues)) )
+          function(testPvalues) callGeneric( new("Pvalues", testPvalues)) )
 
-#' @describeIn fishersPvalueSumTest Fisher's combinded probability test
+#' @describeIn fishersPvalueSumTest Fisher's combined probability test
 setMethod("fishersPvalueSumTest",
           signature = c(testPvalues = "Pvalues"),
           function(testPvalues){

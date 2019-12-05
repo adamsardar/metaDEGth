@@ -4,7 +4,7 @@
 #' 
 #' This function is somewhat analagous to BioNet::scoreNodes
 #' 
-#' @param betaUniformFit (optional) A model . Set to NULL to autofit on the fly.
+#' @param betaUniformFit (optional) A beta-uniform model of the P-value distribution. Set to NULL to autofit on the fly.
 #' @param FDR The tolerable fraction of false positives within the set of positive scoring values. See Morris & Pounds (2003)
 #' @param pVals Vector of P-values to score
 #' 
@@ -16,7 +16,7 @@
 #' @include Pvalues-S4class.R
 #' @seealso fitBetaUniformParameters BioNet::scoreNodes
 #' @references Pounds, S., & Morris, S. W. (2003). Estimating the occurrence of false positives and false negatives in microarray studies by approximating and partitioning the empirical distribution of p-values. Bioinformatics
-#' @references Beisser D, Klau GW, Dandekar T, Müller T, Dittrich MT. BioNet: An R-Package for the functional analysis of biological networks. Bioinformatics. 2010
+#' @references Dittrich MT, Klau GW, Rosenwald A, Dandekar T, Müller T. Identifying functional modules in protein-protein interaction networks: An integrated exact approach. Bioinformatics. 2008
 setGeneric("betaUniformScore",
            valueClass = "numeric",
            function(x, betaUniformFit = NULL, FDR = 5E-2) { standardGeneric("betaUniformScore")},

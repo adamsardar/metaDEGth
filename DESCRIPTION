@@ -28,6 +28,7 @@ Collate:
     'betaUniformModel-S4class.R'
     'betaUniformScore.R'
     'combinedPvalueTests.R'
+    'fishersPvalueSumTest.R'
     'fitBetaUniformModel.R'
     'metaDEGth-package.R'
     'plotPvalues.R'

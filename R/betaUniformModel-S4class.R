@@ -44,8 +44,7 @@ setMethod("convertFromBUM", signature = c(obj = "bum"),
                              pvalues = obj$pvalues,
                              negLL = mkScalar(obj$negLL))} )
 
-# Distribution methods
-
+## Distribution methods ##
 
 ## Group generic for extracting protions of a distribution at particular cutoffs
 setGroupGeneric("densityPartitioning",
