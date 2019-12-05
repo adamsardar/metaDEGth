@@ -1,4 +1,4 @@
-#' Fo each P-value, compute the log likelihood ratio of originating from signal or noise
+#' Fo each P-value, compute the log likelihood ratio of originating from signal or noise component
 #' 
 #' Relative to some false discovery threshold, compute the relative ratio of probabilities and then take the natural logarithm.
 #' 
