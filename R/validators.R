@@ -150,11 +150,31 @@ validatePvalues <- function(candidatePvalues){
   
   assert_that( all( is.pval(candidatePvalues), na.rm = TRUE) )
   
+  vertex_attr_names(testNet)
+  
   invisible(candidatePvalues)
 }
 
 on_failure(validatePvalues) <- function(call, env){ paste0(deparse(call$x), "  should be a P-value, hence must be between 0 and 1") }
 
+
+############
+
+validateIgraphWithPvalues <- function(candidateNetWithPvals){
+  
+  validateNetwork(candidateNetWithPvals)
+  
+  pValAttr <- str_extract(vertex_attr_names(candidateNetWithPvals),
+                          regex("(\\bpval\\b|\\bpvalue\\b|\\bp\\.value\\b|\\bp\\.value\\b|\\bp\\b)", ignore_case = TRUE) ) %>% na.omit
+  
+  assert_that(length(pValAttr) == 1)
+  
+  V(candidateNetWithPvals)$PVALUE <- vertex_attr(candidateNetWithPvals, "pValue")
+  
+  invisible(candidateNetWithPvals)
+}
+
+on_failure(validateIgraphWithPvalues) <- function(call, env){ paste0(deparse(call$x), " must have a single P-value attribute. Found:", vertex_attr_names(call$x)  ) }
 
 ############
 
