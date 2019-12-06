@@ -1,0 +1,60 @@
+---
+title: "Include TTRUST TF-Target Data"
+author: "Adam Sardar"
+date: "12/5/2019"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+
+TTRUST is a manually created database of human and mouse transcriptional regulation. The human dataset will serve as a perfect example transcription factor - target relations. Further, they are availab
+
+```{r}
+library(data.table)
+library(rvest)
+
+TTRUST <- fread("https://www.grnpedia.org/trrust/data/trrust_rawdata.human.tsv",
+                col.names = c("TF","target","modulation","PubMedID"))
+
+TTRUSThumanSymbolMap <- html("https://www.grnpedia.org/trrust/data/search_list.human.htm") %>% html_table() %>% .[[1]]
+
+setDT(TTRUSThumanSymbolMap, check.names = TRUE)
+```
+
+TTRUST comes with gene symbols, which are little to no good in deep omics work. We shall use their values to map to gene IDs and then the uniprot ID mapping file to annoate
+
+```{r}
+
+ENST2ENSG <- fread('zcat /tmp/Homo_sapiens.GRCh38.cdna.all.fa.gz | grep "^>" | perl -pe "s/(>|chromosome:|gene:|GRCh38:|gene_biotype:|transcript_biotype:|gene_symbol:)//g" | perl -ne "s/\\s+/\\t/g; CORE::say $_" | cut -f1-7 ' , header = FALSE, fill = TRUE)
+
+colnames(ENST2ENSG) <- c("ENST","havanaStatus","chromosome","ENSG","geneStatus","geneStatus","geneSymbol")
+
+geneSymbols2map <- unique(c(TTRUST$TF, TTRUST$target))
+
+geneSymbols2ENSG <- ENST2ENSG %>% 
+  .[geneStatus == "protein_coding"] %>%
+  .[geneSymbol %in% geneSymbols2map, .(ENSG = str_remove_all(ENSG, "\\.\\d+$"), geneStatus, geneSymbol)] %>% 
+  unique
+
+TTRUST[TTRUSThumanSymbolMap, geneID := Entrez.ID, on = .(target==Gene.symbol)]
+
+TTRUST %<>% merge(
+      geneSymbols2ENSG[,.(geneSymbol, ENSG)],
+      by.x = "target",
+      by.y = "geneSymbol",
+      all.x = TRUE)
+
+TTRUST[is.na(ENSG)] 
+
+```
+
+A handful of entries do not map. Should be fit for purpose
+
+```{r}
+
+TTRUST_TF2targets_DT <- TTRUST
+
+save(TTRUST_TF2targets_DT, file = "./data/TTRUST_TF2targets_DT.RData", compress = "xz")
+```
+
