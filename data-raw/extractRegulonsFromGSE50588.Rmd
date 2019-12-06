@@ -1,17 +1,18 @@
 ---
-title: "Processing GSE50588 to produce validation sets"
+title: "Processing GSE50588 to produce knockdown validation sets"
 author: "Adam Sardar"
-date: "19 November 2018"
+date: "5 December 2018"
 output: html_document
 editor_options: 
   chunk_output_type: console
 ---
 
-# TODO detail motivation further
-
-[Cusanovich et al.](http://dx.plos.org/10.1371/journal.pgen.1004226) have prepared a fantastic dataset of transcription factors knocked down with siRNA in a lymphoblastoid cell line. This is a perfect dataset for producing a gold standard form the metaDEGth algorithm.
+[Cusanovich et al.](http://dx.plos.org/10.1371/journal.pgen.1004226) have prepared a fantastic dataset of transcription factors knocked down with siRNA in a lymphoblastoid cell line. This is a perfect dataset for producing a gold standard form the metaDEGth package
 
 "201 samples were analyzed - 57 transcription factors were knocked down in triplicate in the same cell line, 2 factors were knocked down in 6 replicates each and an additional 18 control knockdowns (siRNA not targeting any known gene) were analyzed"
+
+
+Cusanovich et al. assayed many siRNA knockdowns of trancription factors in a lymphoblastoid cell line. Each knockdown was performed in triplicate (except for SP1 and IRF5 which were in hexaplet). 18 controls (siRNAs that were not known to bind to a gene product) were also collected. This constitutes an excellent testing and validation set for active regulon detection.
 
 The authors use Illumina HumanHT-12 V4.0 expression beadchips, so a pipeline that makes use of the detection P-value should be employed. Luckily limma solves the problem for us!
 
@@ -49,7 +50,7 @@ samples_GSE50588_metadataDT[,
                             by = sampleNames]
 samples_GSE50588_metadataDT[sampleNames == "ID_REF", type := "ID"]
 
-samples_GSE50588_metadataDT[type == "expression",.N ,by = TFknockdown][order(N)]
+TF_present <- samples_GSE50588_metadataDT[type == "expression",.N ,by = TFknockdown][order(N)]
 ```
 
 # Background correct and quantile normalise
@@ -72,6 +73,7 @@ detectionPvalueMat <- GSE50588_unnormalised_RAW_DT[,
 
 GSE50588_expObj <- neqc(x = exprsMat,
                         detection.p = detectionPvalueMat)
+
 ```
 
 # Map Ilumina probe IDs
@@ -85,6 +87,7 @@ GPL10558_annot_DT <- fread(cmd = "curl ftp://ftp.ncbi.nlm.nih.gov/geo/platforms/
 GPL10558_annot_DT <- unique(GPL10558_annot_DT[Probe_Id != "",.(Probe_Id, RefSeq_ID, Entrez_Gene_ID, Symbol ,Definition)])
 
 setkey(GPL10558_annot_DT, "Probe_Id")
+
 ```
 
 # Fit limma model and estimate differential expression
@@ -113,10 +116,14 @@ We are now ready to build models and compare contrasts (siRNA knockdowns). The p
 
 library(purrr)
 
-GSE50588_lmFit <- lmFit(GSE50588_expObj,
+GSE50588_lmFit <- lmFit(GSE50588_eSet,
                         design = GSE50588_designMat) %>%
                   contrasts.fit(contrasts = GSE50588_TFcontrastMat) %>%
                   eBayes
+
+# No point having data that we have no regulons to test!
+load("../data/TTRUST.RData")
+assayedTFs <- intersect(assayedTFs, TTRUST[,.N,by=TF][N >= 5,TF])
 
 TF_siRNA_knockdowns_diffex <- map(
   assayedTFs,
@@ -135,14 +142,8 @@ TF_siRNA_knockdowns_diffex <- map(
 TF_siRNA_knockdowns_GSE50588_summary <- Reduce(function(x,y){x[y]}, TF_siRNA_knockdowns_diffex) %>%    
                                 .[GPL10558_annot_DT, , on = .(HumanHT12v4probeID == Probe_Id)]
 
-save(TF_siRNA_knockdowns_GSE50588_summary,
-     file = "./data/TF_siRNA_knockdowns_GSE50588_summary.RData",
-     compress = "xz")
-
-object.size(TF_siRNA_knockdowns_GSE50588_summary) %>% print(units = "Mb")
-
 ```
 
-# TODO 40Mb data files are far too big. Cull somehow.
 
-# TODO - a few volcano plots with some regulons highlighted
+So 40Mb data files are far too big for inclusion into the package. It is still a useful data set, but it will probably just have to be for the paper rather than bundled into the package.
+
