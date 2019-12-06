@@ -1,29 +1,68 @@
 ---
 title: 'RNAseq differential expression example: siRNA knockdown of TAZ'
 author: "Adam Sardar"
-date: "12 October 2018"
+date: "6 December 2019"
 output: html_document
 editor_options: 
   chunk_output_type: console
 ---
 
-With the plummeting costs of transcriptomic profiling by RNAseq, such datasets are appearing in increasing abundance on GEO. Turning these data into useful insight occurs in two stages:
+# About GEO study GSE73555
+
+GSE73555: Genes regulated by TAZ transcription co-factor in a lung fibroblast cell line; an RNAseq dataset (Ion Torrent). [Here's a link to the paper](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5307361/). I've used this dataset in the past and know that the signal is relatively clean, so shall include it within metaDEGth. Also, it's a perfect 'spike-in' study, so should be a nice critical assessment excercise.
+
+It is a pretty interesting experiment; the study authors used [siRNA](https://en.wikipedia.org/wiki/Small_interfering_RNA) to knock down the [TAZ](https://www.genecards.org/cgi-bin/carddisp.pl?gene=WWTR1) gene. TAZ operates a transcription co-activatoon and the protein contains a PDZ binding linear motif (probably somewhere within its disordered regions http://d2p2.pro/view/sequence/up/Q9GZV5), which is likely PPI partner. This GEO dataset describes a knock-out experiment performed in a lung fibroblast cell line; two different siRNA's for TAZ and a negative control (NTC) siRNA.
+
+With the plummeting costs of transcriptomic profiling by RNAseq, these kind of datasets are appearing in increasing abundance on GEO. Turning these data into useful insight occurs in two stages:
 - first, we must download and align short DNA reads against a model of the target genome (typically human) so as to estimate transcript abundance (literally how many copies of each gene transcript/splice-isoform are there)
 - second, we need to read in the transcript abundance per sample, aggregate to the gene-level, fit a regularised linear model of gene expression and then perform differential expression analysis based on the study design
 
-This workbook assumes that user has already performed read alignment. For 99% of cases, this first stage is best performed using a pseudo-alignment tool such as [Kallisto](https://github.com/pachterlab/kallisto), which uses counts of sub-strings in common between reads and reference gene sequences. See command.log for a summary of the steps.
+## Downloading reads and aligning against the human genome
 
-# About GEO study GSE73555
+From the [GSE73555 project page](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE73555), the study corresponds to the sequence read archive project of [SRP064305](https://www.ncbi.nlm.nih.gov/sra?term=SRP064305). We shall use the [SRAtoolkit](https://github.com/ncbi/sra-tools/wiki/HowTo:-Binary-Installation) to download the fastq data.
 
-GSE73555: Genes regulated by TAZ transcription co-factor in a lung fibroblast cell line; an RNAseq dataset (Ion Torrent). [Here's a link to the paper](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5307361/)
+I've elected to work in the directory /mnt/c/GSE73555, downloading the reads into a sub-directory of FASTQ
 
-This is a pretty interesting experiment; the study authors used [siRNA](https://en.wikipedia.org/wiki/Small_interfering_RNA) to knock down the [TAZ](https://www.genecards.org/cgi-bin/carddisp.pl?gene=WWTR1) gene. TAZ operates a transcription co-activatoon and the protein contains a PDZ binding linear motif (probably somewhere within its disordered regions http://d2p2.pro/view/sequence/up/Q9GZV5), which is likely PPI partner. This GEO dataset describes a knock-out experiment performed in a lung fibroblast cell line; two different siRNA's for TAZ and a negative control (NTC) siRNA.
+```{r}
+library(data.table)
+
+SRP064305details <-  fread("http://trace.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?save=efetch&db=sra&rettype=runinfo&term=SRP064305")
+
+fwrite(SRP064305details, "/mnt/c/GSE73555/SRP064305details.tsv", sep = "\t", quote = FALSE)
+```
+
+fasterq-dump from the SRAtoolkit can take SSR identifiers and download the fastq files directly:
+
+```{bash}
+
+time cut -f 1 ../SRP064305details.tsv | grep 'SRR' | parallel -j 5 fasterq-dump {} -e 1 -t /tmp/scratch
+
+pigz -p 10 ./*.fastq # Save some space!!
+```
+
+This took around 90 minutes. Pretty slow for 18Gb in my opinion!
+
+In my workflows, I tend to use the pseudo-alignment tool [Kallisto](https://github.com/pachterlab/kallisto), which uses counts of sub-strings in common between reads and reference gene sequences. It is dramatically faster than using a full sequence aligner such as TopHat or BWA and in every study that I have ever processed, just as accurate. A full tutorial exists on the github page, but the commands that I used are detailed below. This was performed in a subdirectory 'alignedReads'
+
+Create an index of the current Homo sapiens cDNA library (downloaded from ENSMB ftp://ftp.ensembl.org/pub/release-98/fasta/homo_sapiens/cdna/)
+
+```{bash}
+kallisto index -i Homo_sapiens.GRCh38.cDNA.idx /tmp/Homo_sapiens.GRCh38.cdna.all.fa.gz
+```
+
+Kallisto requires a fragment length and standard deviation estimate, but we do not have access to the bioanalyser result! As a result, we'll use a value in rought the 150-200 range and use (roughly) a poisson standard deviation.
+
+```{bash}
+time cut -f 1 ../SRP064305details.tsv | grep 'SRR' | parallel -j 1 kallisto quant --single  -l 180 -s 15 -t 10 -i ../Homo_sapiens.GRCh38.idx -o ./{} ../FASTQ/{}.fastq.gz
+```
+
+Takes under 10 minutes.
 
 # Data import
 
 We shall use the `tximport` package to read in the transcript estimate data and then the `limma-voom` pipeline to process it. Such a procedure is advised in a comprehensive [benchmarking study from 2016](https://www.biorxiv.org/content/early/2016/06/10/058164).
 
-First we will need a transcript-to-gene mapping. This can actually be extracted directly from the cDNA file (a catalogue of all of the coding regions in the genome), downloadable [directly from enseml](http://www.ensembl.org/info/data/ftp/index.html). On a Linux machine, one can simply use the first `fread` command and do a bit of text manipulation on the fly using command line tools. No such luck on windows, but I have prepared a file 'ENSG2ENSTmap.tsv' in the datasources directory corresponding to the most recent build of the human genome, GRCh38.
+First we will need a transcript-to-gene mapping. This can actually be extracted directly from the cDNA file (a catalogue of all of the coding regions in the genome), downloadable [directly from enseml](http://www.ensembl.org/info/data/ftp/index.html). If you just performed the step above, then the relavent file is in /tmp. On a Linux machine, one can simply use the first `fread` command and do a bit of text manipulation on the fly using command line tools/
 
 ```{r import transcript to gene mapping}
 
@@ -32,7 +71,7 @@ library(data.table)
 #Suck out the ENST to ENSG (and gene Symbol) mapping from the GTF file, downloaded to /tmp/
 ENST2ENSG <- fread('zcat /tmp/Homo_sapiens.GRCh38.cdna.all.fa.gz | grep "^>" | perl -pe "s/(>|chromosome:|gene:|GRCh38:|gene_biotype:|transcript_biotype:|gene_symbol:)//g" | perl -ne "s/\\s+/\\t/g; CORE::say $_" | cut -f1-7 ' , header = FALSE, fill = TRUE)
 
-colnames(ENST2ENSG) <- c("ENST","havanaStatus","chromosome","ENSG","geneStatus","geneStatus","genesymbol")
+colnames(ENST2ENSG) <- c("ENST","havanaStatus","chromosome","ENSG","geneStatus","geneStatus","geneSymbol")
 ```
 
 We are dealing with SRP064305, so we shall load the short-read metadata files directly from SRA and then download and extract the sample annotation from GEO before merging them together into a single table.
@@ -44,7 +83,6 @@ library(purrr)
 library(stringr)
 library(magrittr)
 
-SRP064305details <-  fread("http://trace.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?save=efetch&db=sra&rettype=runinfo&term=SRP064305")
 
 parsedSOFT <- getGEO(GEO = "GSE73555", GSEMatrix = FALSE, AnnotGPL = FALSE, getGPL = FALSE)
 
@@ -72,11 +110,9 @@ GSMdetails
 
 The end result is a table that maps together a SRR sample (the reads downloaded from SRA) with the experimental condition; which siRNA was used in this case.
 
-n.b. if the data.table syntax is confusing above, I suggest that you arm yourself with [Dirk Eddelbuettel's excellent 8-page R guide, which covers much of the introductory data.table syntax](https://eddelbuettel.github.io/gsir-te/Getting-Started-in-R.pdf) 
-
 # Setting up the design matrix
 
-The cornerstone of a linear model regression is the [design matrix](https://en.wikipedia.org/wiki/Design_matrix) - aka Model Matrix. It relates samples to experimental conditions in the experimental study; in this case, TAZ siRNA 1, TAZ siRNA 2 and control siRNAs.
+The cornerstone of a linear model regression is the [design matrix](https://en.wikipedia.org/wiki/Design_matrix) - aka a Model Matrix. It relates samples to experimental conditions in the experimental study; in this case, TAZ siRNA 1, TAZ siRNA 2 and control siRNAs.
 
 Luckily, base R has a helpful method `?model.matrix` to assist in the construction of such matrices.
 
@@ -103,7 +139,7 @@ projDir <- "/mnt/c/GSE73555/"
 
 # Each kallisto alignment run produces a director (labelled by the SRR ID), with an hdf5 file
 # We shall add a column with file locations to our experimental details table
-GSMdetails[,path := str_c(projDir,"kalistoAlign/",Run,"/abundance.h5")]
+GSMdetails[,path := str_c(projDir,"alignedReads/",Run,"/abundance.tsv")]
 
 # Notice that we pass in a transcript to gene mapping (tx2gene) and that we normalise TPM. See tximport documentation for more details
 kallistoTranscriptEstimates <- tximport(files = GSMdetails[, path],
@@ -190,6 +226,9 @@ setnames(siTAZintervalComparison_DT, "P.Value", "pVal_GTEabsLFC1.5")
 siTAZdiffex_DT[siTAZintervalComparison_DT, pVal_GTEabsLFC1.5 := pVal_GTEabsLFC1.5, on = "ENSG"]
 siTAZdiffex_DT[, qVal_GTEabsLFC1.5 := p.adjust(pVal_GTEabsLFC1.5 ,method = "fdr")]
 
+siTAZdiffex_DT[ENST2ENSG[geneStatus == "protein_coding", .(ENSG,geneSymbol)], geneSymbol := geneSymbol, on = "ENSG"] #Add gene symbols
+
+siTAZdiffex_DT[, ENSG := str_remove(ENSG, "\\.\\d+$")] # No need to keep hold of the ENSG versions
 
 siTAZdiffex_DT
 ```
@@ -222,18 +261,27 @@ siTAZdiffex_DT %>%
 
 One of the worst things about bioinformatics is the plethora of gene IDs, symbols and the like. When dealing with a gene locus (which is what RNAseq reads are mapped to), we use ensemble IDs (ENSGXXXX).
 
-TODO - add gene symbols to output
-
 ```{r Gene mapping}
 
+uniprotIDmappings <- fread("ftp://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/idmapping/by_organism/HUMAN_9606_idmapping_selected.tab.gz", header = FALSE)
 
-setorder(siTAZdiffex_DT, siTAZdiffex_DT$pVal_GTEabsLFC1.5)
+#We only really care about swissprot mappings
+swissprot_accessions <- fread("curl ftp://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz | zcat | grep '^>' | perl -ne 'm/sp\\|(\\w+)\\|/; CORE::say $1'", header = FALSE)
 
-#Write the results out to a data file
+swissprotIDmappingssubset <-  uniprotIDmappings[V1 %in% swissprot_accessions$V1][V19 != "", c(1,2,3,19)]
+colnames(swissprotIDmappingssubset) <- c("accession","name","geneID","ENSGgrouped")
+swissprotIDmappingssubset %<>% .[,.(ENSG = unlist(tstrsplit(ENSGgrouped, "; "))), by = .(accession, name, geneID, ENSGgrouped)]
 
+siTAZdiffex_DT %<>% merge(
+  swissprotIDmappingssubset[,.(accession,name,geneID,ENSG)],
+  by = "ENSG", all.x = TRUE)
+
+setorder(siTAZdiffex_DT, pVal_GTEabsLFC1.5 )
+
+#Write the results out to a data file for inclusion in the package
 save(siTAZdiffex_DT, file = "./data/siTAZdiffex_DT.RData", compress = "xz")
 
-siTAZdiffex_DT
+siTAZdiffex_DT[adj.P.Val < 1E-3][order(-logFC)]
 ```
 
-What's at the top of the list? [Stanniocalcin](https://en.wikipedia.org/wiki/Stanniocalcin), which is a glycoprotein that controls calcium and phosphate - need I remind you that we are studying [fibrosis](https://www.nature.com/articles/srep18117).
+What's at the top of the list? [Stanniocalcin](https://en.wikipedia.org/wiki/Stanniocalcin), which is a glycoprotein that controls calcium and phosphate - need I remind you that this study was within [fibrosis](https://www.nature.com/articles/srep18117).
