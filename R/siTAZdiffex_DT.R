@@ -15,5 +15,5 @@
 #' @references Noguchi S, Saito A, Mikami Y, Urushiyama H, Horie M, Matsuzaki H, et al. TAZ contributes to pulmonary fibrosis by activating profibrotic functions of lung fibroblasts. Sci Rep. 2017
 #' @references Pimentel H, Bray NL, Puente S, Melsted P, Pachter L. Differential analysis of RNA-seq incorporating quantification uncertainty. Nat Methods. 2017
 #' @references Law CW, Chen Y, Shi W, Smyth GK. voom: Precision weights unlock linear model analysis tools for RNA-seq read counts. Genome Biol. 2014
-#' @format A data.table with 14,501 rows, documenting differential gene expression of 14,475 ENSEMBL gene entities. Addition gene symbols, entrez gene IDs and uniprot annotations also included (duplicated ENSG entries result from many-to-one mappings)
+#' @format A data.table with 14,501 rows, documenting differential gene expression of 14,475 ENSEMBL gene entities in two experimental conditions (siTAZ1 and siTAZ2). Addition gene symbols, entrez gene IDs and uniprot annotations also included (duplicated ENSG entries result from many-to-one mappings)
 "siTAZdiffex_DT"

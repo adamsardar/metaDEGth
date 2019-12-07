@@ -139,10 +139,11 @@ projDir <- "/mnt/c/GSE73555/"
 
 # Each kallisto alignment run produces a director (labelled by the SRR ID), with an hdf5 file
 # We shall add a column with file locations to our experimental details table
-GSMdetails[,path := str_c(projDir,"alignedReads/",Run,"/abundance.tsv")]
+
+SRP064305details[,path := str_c(projDir,"alignedReads/",Run,"/abundance.tsv")]
 
 # Notice that we pass in a transcript to gene mapping (tx2gene) and that we normalise TPM. See tximport documentation for more details
-kallistoTranscriptEstimates <- tximport(files = GSMdetails[, path],
+kallistoTranscriptEstimates <- tximport(files = SRP064305details[, path],
                                         type = "kallisto",
                                         tx2gene = ENST2ENSG[,.(ENST,ENSG)],
                                         countsFromAbundance = "lengthScaledTPM",
@@ -154,6 +155,8 @@ gm_mean = function(x, na.rm=TRUE){ exp(sum(log(x[x > 0]), na.rm=na.rm) / length(
 
 geneAbundances <- data.table(ENSG = row.names(kallistoTranscriptEstimates$abundance),
                           gm_abundance = apply(kallistoTranscriptEstimates$abundance, 1, gm_mean) )
+
+colnames(kallistoTranscriptEstimates$counts) <-  SRP064305details[, SampleName]
 
 # Low quantified transcripts/genes can introduce strange artifacts. Filter these out with a very, very low cutoff. We only want to remove the lowest expressed genes
 transcriptDGElist <- kallistoTranscriptEstimates$counts %>% 
@@ -209,22 +212,26 @@ limma has two techniques for estimating differential expression using shrinkage.
 GSE73555_allContrast <- contrasts.fit(GSE73555_fit, contrasts = contrastMat)
 
 # Produce a table of differential expression using eBayes and relabel the gene label column
-siTAZdiffex_DT <- eBayes(GSE73555_allContrast) %>% 
+
+# siTAZ1
+siTAZ1diffex_DT <- eBayes(GSE73555_allContrast) %>% 
   topTable(coef = "knockdownTAZ1", adjust.method = "fdr", number = Inf) %>%
-  data.table(keep.rownames = TRUE)
+  data.table(keep.rownames = TRUE) %>% 
+  .[, .(rn, siTAZ1_logFC = logFC, siTAZ1_avExpr = AveExpr, siTAZ1_qValue = adj.P.Val, siTAZ1_pValue = P.Value)]
 
-setnames(siTAZdiffex_DT, "rn", "ENSG")
+setnames(siTAZ1diffex_DT, "rn", "ENSG")
 
-# Produce a table of differential expression by treat (i.e. against an interval)
-siTAZintervalComparison_DT <- treat(GSE73555_allContrast, lfc = log2(1.2)) %>% 
-  topTreat(coef = "knockdownTAZ1", adjust.method = "fdr", number = Inf) %>%
-  data.table(keep.rownames = TRUE)
+# siTAZ2
+siTAZ2diffex_DT <- eBayes(GSE73555_allContrast) %>% 
+  topTable(coef = "knockdownTAZ2", adjust.method = "fdr", number = Inf) %>%
+  data.table(keep.rownames = TRUE) %>% 
+  .[, .(rn, siTAZ2_logFC = logFC, siTAZ2_avExpr = AveExpr, siTAZ2_qValue = adj.P.Val, siTAZ2_pValue = P.Value)]
 
-setnames(siTAZintervalComparison_DT, "rn", "ENSG")
-setnames(siTAZintervalComparison_DT, "P.Value", "pVal_GTEabsLFC1.5")
+setnames(siTAZ2diffex_DT, "rn", "ENSG")
 
-siTAZdiffex_DT[siTAZintervalComparison_DT, pVal_GTEabsLFC1.5 := pVal_GTEabsLFC1.5, on = "ENSG"]
-siTAZdiffex_DT[, qVal_GTEabsLFC1.5 := p.adjust(pVal_GTEabsLFC1.5 ,method = "fdr")]
+
+
+
 
 siTAZdiffex_DT[ENST2ENSG[geneStatus == "protein_coding", .(ENSG,geneSymbol)], geneSymbol := geneSymbol, on = "ENSG"] #Add gene symbols
 
