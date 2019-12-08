@@ -17,6 +17,7 @@
 #' @family P-value sum tests
 #' @references Luo, W., Friedman, M. S., Shedden, K., Hankenson, K. D., & Woolf, P. J. (2009). GAGE: generally applicable gene set enrichment for pathway analysis. BMC Bioinformatics
 #' @importFrom stats pgamma
+#' @include Pvalues_S4Class.R
 #' @export
 setGeneric("betaUniformPvalueSumTest",
            signature = c("testPvalues", "betaUniformFit"),
