@@ -24,9 +24,9 @@ Suggests:
     testthat (>= 3.2)
 RoxygenNote: 6.1.1
 Collate: 
-    'Pvalues-S4class.R'
+    'BetaUniformModel_S4Class.R'
+    'Pvalues_S4Class.R'
     'TTRUST_TFtarget_relationships.R'
-    'betaUniformModel-S4class.R'
     'betaUniformPvalueSumTest.R'
     'betaUniformScore.R'
     'fishersPvalueSumTest.R'
