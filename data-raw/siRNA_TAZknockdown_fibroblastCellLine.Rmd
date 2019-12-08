@@ -229,9 +229,9 @@ siTAZ2diffex_DT <- eBayes(GSE73555_allContrast) %>%
 
 setnames(siTAZ2diffex_DT, "rn", "ENSG")
 
+siTAZdiffex_DT <- merge(siTAZ1diffex_DT, siTAZ2diffex_DT, by = "ENSG")
 
-
-
+siTAZdiffex_DT[, qplot(siTAZ1_logFC, siTAZ2_logFC)]
 
 siTAZdiffex_DT[ENST2ENSG[geneStatus == "protein_coding", .(ENSG,geneSymbol)], geneSymbol := geneSymbol, on = "ENSG"] #Add gene symbols
 
@@ -249,16 +249,16 @@ A so-called volcano plot is a way of succinctly summarising effect size and sign
 library(ggplot2)
 
 siTAZdiffex_DT %>%
-    ggplot(aes(x = logFC, y = -log10(pVal_GTEabsLFC1.5),
-               colour = (qVal_GTEabsLFC1.5 < 0.01),
-               shape = (qVal_GTEabsLFC1.5 < 0.01) ) ) +
+    ggplot(aes(x = siTAZ1_logFC, y = -log10(siTAZ1_pValue),
+               colour = (siTAZ2_qValue < 0.05),
+               shape = (siTAZ2_qValue < 0.05) ) ) +
     geom_point(size = 2) +
     theme_bw() +
-    scale_color_discrete(name = "qValue < 0.01") +
+    scale_color_discrete(name = "siTAZ2 qValue < 0.05") +
     scale_shape(guide = FALSE) +
     scale_x_continuous(breaks = seq(-10,10,1)) +
     scale_y_continuous(breaks = seq(0,20,0.5)) +
-    labs(x = "log2(fold change)", y = "-log10(P-value) [alt. hyp.: abs(logFC) >= 1.2]",
+    labs(x = "log2(fold change) for siTAZ1", y = "-log10(P-value)",
          title = str_c("Differential expression for TAZ siRNA knockdown study"),
          subtitle = "Data drawn from GSE73555: TAZ knockdown in lung fibroblast cell line")
   
@@ -283,12 +283,12 @@ siTAZdiffex_DT %<>% merge(
   swissprotIDmappingssubset[,.(accession,name,geneID,ENSG)],
   by = "ENSG", all.x = TRUE)
 
-setorder(siTAZdiffex_DT, pVal_GTEabsLFC1.5 )
+setorder(siTAZdiffex_DT, siTAZ1_qValue )
 
 #Write the results out to a data file for inclusion in the package
 save(siTAZdiffex_DT, file = "./data/siTAZdiffex_DT.RData", compress = "xz")
 
-siTAZdiffex_DT[adj.P.Val < 1E-3][order(-logFC)]
+siTAZdiffex_DT[siTAZ1_qValue < 1E-3][order(-siTAZ1_logFC)]
 ```
 
 What's at the top of the list? [Stanniocalcin](https://en.wikipedia.org/wiki/Stanniocalcin), which is a glycoprotein that controls calcium and phosphate - need I remind you that this study was within [fibrosis](https://www.nature.com/articles/srep18117).
