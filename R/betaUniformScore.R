@@ -13,7 +13,7 @@
 #' @import igraph
 #' @importFrom stats pbeta
 #' @importFrom Biobase mkScalar
-#' @include Pvalues-S4class.R
+#' @include Pvalues_S4Class.R
 #' @seealso fitBetaUniformParameters BioNet::scoreNodes
 #' @references Pounds, S., & Morris, S. W. (2003). Estimating the occurrence of false positives and false negatives in microarray studies by approximating and partitioning the empirical distribution of p-values. Bioinformatics
 #' @references Dittrich MT, Klau GW, Rosenwald A, Dandekar T, Müller T. Identifying functional modules in protein-protein interaction networks: An integrated exact approach. Bioinformatics. 2008
@@ -51,10 +51,15 @@ setMethod("betaUniformScore",
           c(x="ANY", betaUniformFit = "ANY", FDR = "numeric"),
           function(x, betaUniformFit = NULL, FDR) {  callGeneric(x, betaUniformFit, mkScalar(FDR))  })
 
+#' @describeIn betaUniformScore Score p-values from a BetaUniformModel object against inself
+setMethod("betaUniformScore",
+          c(x="BetaUniformModel", betaUniformFit = "missing", FDR = "ANY"),
+          function(x, betaUniformFit, FDR = 5E-2) {  callGeneric(x@pvalues, x, FDR)  })
+
 #' @describeIn betaUniformScore Score P-values against a Beta-uniform model fit on the fly.
 setMethod("betaUniformScore",
           c(x="Pvalues", betaUniformFit = "NULL", FDR = "ANY"),
-          function(x, betaUniformFit, FDR = 5E-2) { callGeneric(x, fitBetaUniformMixtureDistribution(x@.Data), FDR) })
+          function(x, betaUniformFit=NULL, FDR = 5E-2) { callGeneric(x, fitBetaUniformMixtureDistribution(x@.Data), FDR) })
 
 setOldClass("bum") # from BioNet
 #' @describeIn betaUniformScore Score P-values against a beta-uniform model S3 object from BioNet
