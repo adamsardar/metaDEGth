@@ -9,3 +9,8 @@ output: html_document
 
 A pretty straighforward experiment; the authors prepare cell lines that are resistent to WZ4002 (a third generation TKI) and then compare the expression of the two cell lines. Prepared in triplicate and measured on Affymetrix Human Genome U133A 2.0 Arrays.
 
+From the study blurb:
+
+"Our study identifies ERK signaling as a mediator of resistance to irreversible pyrimidine EGFR inhibitors in EGFR T790M-bearing cancers. We further provide a therapeutic strategy to both treat and prevent the emergence of this resistance mechanism."
+
+Should be a good reporter assay for testing different datasets.
