@@ -1,0 +1,24 @@
+---
+title: "Aquired resistance to EGFR inhibitor"
+author: "Adam Sardar"
+date: "9 Dec 2019"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+In [GSE38310](http://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE38310) the authors collect 3 NSCLC cell lines: HCC827 and the derived lines ER3 and T15-2. 
+
+"NCI- HCC827 cells are EGFR-mutant and highly erlotinib-sensitive. In this study we exposed HCC827 cells to increasing concentrations of erlotinib and two highly erlotinib-resistant subclones were developed (ER3 and T15-2). In these subclones no acquired alterations of EGFR or MET were found. We hereby performed a gene expression microarray studies to understand changes that might explain mechanisms of resistance."
+ 
+The authors took some HCC827 cell lines (which were susceptible to erlotinib) and then induced resistence in vivo (within mice). After studying the cell line sequences, no mutations in EGFR were observed hence they looked at expression to see if they could find a reason for the resistance.
+ 
+Studying the associated paper "Activation of the AXL Kinase Causes Resistance to EGFR-Targeted Therapy in Lung Cancer":
+ 
+"Recent studies indicate that multiple resistance mechanisms may operate within an individual tumor to promote EGFR TKI acquired resistance in NSCLC patients."
+ 
+"we hypothesized that AXL overexpression and activation may promote acquired resistance to erlotinib in EGFR-mutant NSCLCs."
+ 
+Lets take a look for ourselves shall we?
+
+The technology used was the Illumina HumanHT-12 V3.0 expression beadchip
