@@ -1,0 +1,195 @@
+---
+title: 'Array differential expression example: rAAV knockout of ATF3'
+author: "Adam Sardar"
+date: "6 December 2019"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# About GEO study [GSE74363](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE74363)
+
+GSE74363: 	The Common Stress Responsive Transcription Factor ATF3 Binds Active Enhancers and Bookmarks Genomic Sites for Transcriptional Regulation. [Paper](https://www.ncbi.nlm.nih.gov/pubmed/27146783). The authors collect wildtype and ATF3 knockout expression using an illumina beadchip array (GEO dataset  GSE74362). This should serve as a spike-in dataset.
+
+The process used is similar to that 
+
+
+# Import data
+
+Download the unnormalised zipped expression data directly from GEO, then annotate the columns and background normalise using limma::neqc. I tried downloaded the processed files and the P-value distribution was very odd - I suspect and artifact. 
+
+```{r Read in data directly from GEO}
+
+library(data.table)
+library(GEOquery)
+library(purrr)
+library(stringr)
+library(magrittr)
+
+parsedGSE74362SOFT <- getGEO(GEO = "GSE74362", GSEMatrix = FALSE, AnnotGPL = FALSE, getGPL = TRUE)
+
+
+GSE74362_unnormalised_RAW_DT <- fread(
+  cmd = "curl ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE74nnn/GSE74362/suppl/GSE74362_non-normalized.txt.gz | zcat",
+  check.names = TRUE)
+
+# Copied from the GSE74362 page
+GSE74362_sampleAnnot <- fread(
+"GSM1918933,HCT116 WT DMSO rep1
+GSM1918934,HCT116 WT CPT rep1
+GSM1918935,HCT116 E11 DMSO rep1
+GSM1918936,HCT116 E11 CPT rep1
+GSM1918937,HCT116 WT DMSO rep2
+GSM1918938,HCT116 WT CPT rep2
+GSM1918939,HCT116 E11 DMSO rep2
+GSM1918940,HCT116 E11 CPT rep2
+GSM1918941,HCT116 WT DMSO rep3
+GSM1918942,HCT116 WT CPT rep3
+GSM1918943,HCT116 E11 DMSO rep3
+GSM1918944,HCT116 E11 CPT rep3", 
+header = FALSE, sep= ",", col.names = c("GSM", "sample"))
+
+# I have to make the uncomfortable assumption that these two sets are sorted in the same way ...
+GSE74362_sampleAnnot %<>% .[,.(colName = c(make.names(sample), str_c(make.names(sample),"_pVal") )), by = GSM]
+
+
+setnames(GSE74362_unnormalised_RAW_DT, GSE74362_sampleAnnot[, c("HumanHT12v4probeID",colName)])
+
+
+# Matched that of illumina beadchips
+GPL10558_annot_DT <- fread(cmd = "curl ftp://ftp.ncbi.nlm.nih.gov/geo/platforms/GPL10nnn/GPL10558/suppl/GPL10558_HumanHT-12_V4_0_R2_15002873_B.txt.gz | zcat", skip = 8, header = TRUE, fill = TRUE)
+
+setkey(GPL10558_annot_DT, "Probe_Id")
+```
+
+
+Build an annotation frame for the experimental system
+
+```{r Sample metadata extraction and clean up}
+
+samples_GSE74362_metadataDT <- data.table(
+  sampleNames = names(GSE74362_unnormalised_RAW_DT) )
+
+samples_GSE74362_metadataDT[, condition := shift(sampleNames)] # label all of the P-value cols
+
+samples_GSE74362_metadataDT[, type := "measure"]
+samples_GSE74362_metadataDT[sampleNames %like% "pVal", type := "detect"]
+samples_GSE74362_metadataDT[sampleNames == "HumanHT12v4probeID", type := "probeID"]
+
+samples_GSE74362_metadataDT[type == "measure", condition := sampleNames]
+
+samples_GSE74362_metadataDT[, treatment := str_extract(condition,"HCT116\\.\\w+\\.\\w+") %>% str_remove("HCT116\\.") %>% str_replace("\\.", "_")]
+
+samples_GSE74362_metadataDT[GSE74362_sampleAnnot, GSM := i.GSM, on = .(sampleNames == colName)]
+```
+
+# Background correct and quantile normalise
+
+We shall make use of the  `neqc` function in the `limma` package, which is designed for use with Illumina BeadChips; it performs background correction followed by quantile normalisation across all samples, using detection P-values provided by the BeadArray detector.
+
+```{r Normalise Raw Measurements}
+
+library(limma)
+
+
+GSE74362measureColumns <- colnames(GSE74362_unnormalised_RAW_DT)[colnames(GSE74362_unnormalised_RAW_DT) %like% "HCT116"]
+
+exprsMat <- GSE74362_unnormalised_RAW_DT[, 
+                                    as.matrix(.SD, rownames = HumanHT12v4probeID),
+                    .SDcols = GSE74362measureColumns[!GSE74362measureColumns %like% "pVal"] ]
+
+detectionPvalueMat <- GSE74362_unnormalised_RAW_DT[,
+                                    as.matrix(.SD, rownames = HumanHT12v4probeID),
+                    .SDcols = GSE74362measureColumns[GSE74362measureColumns %like% "pVal"] ]
+
+GSE74362_expObj <- neqc(x = exprsMat,
+                        detection.p = detectionPvalueMat)
+```
+
+
+
+
+```{r Produce contrast and design matricies}
+
+GSE74362_designMat <- model.matrix(sampleNames ~ 0 + treatment,
+                                   samples_GSE74362_metadataDT[type == "measure",.(sampleNames,treatment)])
+
+colnames(GSE74362_designMat) %<>% str_remove("treatment")
+row.names(GSE74362_designMat) <- samples_GSE74362_metadataDT[type == "measure", sampleNames]
+
+
+GSE74362_ATF3contrastMat <- makeContrasts(
+              contrasts = "WT_DMSO-E11_DMSO",
+              levels = GSE74362_designMat)
+
+
+
+exprsMat[exprsMat <0 ] <- 0
+
+GSE74362_lmFit <- lmFit(exprsMat,
+                        design = GSE74362_designMat) %>%
+                  contrasts.fit(contrasts = GSE74362_ATF3contrastMat) %>%
+                  eBayes
+
+
+GSE74362_diffexDT <- data.table(topTable(GSE74362_lmFit, number = Inf), keep.rownames = TRUE )
+     
+setnames(GSE74362_diffexDT, "rn", "HumanHT12v4probeID")
+    
+setkey(GSE74362_diffexDT, "HumanHT12v4probeID")
+
+
+GSE74362_diffexDT[GPL10558_annot_DT, geneID := i.Entrez_Gene_ID]
+GSE74362_diffexDT[GPL10558_annot_DT, geneSymbol := i.Symbol]
+
+GSE74362_diffexDT[, qplot(P.Value)]
+
+ggplot(GSE74362_diffexDT, aes(x = P.Value)) + 
+    geom_histogram(aes(y=..density..),colour="black",fill="azure3",binwidth = 0.025, center = 0.0125) +
+    labs(title  = "P-value distribution",
+         x = "P-Value",
+         y = "Density") +
+    theme_bw() + 
+    scale_x_continuous(limits = c(0,1), breaks = seq(0,1,0.1)) 
+```
+
+So there is almost no signal in this dataset!! Any method should be robust to this kind of sample.  70+% of calls made at FDR of 0.05 are false positives!! It might serve as good decoy dataset actually.
+
+```{r}
+
+rAAVATF3_diffexDT <- GSE74362_diffexDT
+
+save(rAAVATF3_diffexDT, file = "./data/rAAVATF3_diffexDT.RData", compress = "xz")
+```
+
+
+
+```{r}
+
+suppressWarnings(ATF3knockoutBUM <- fitBetaUniformMixtureDistribution(GSE74362_diffexDT$P.Value, nStarts = 10))
+
+# 70+% of calls made at FDR of 0.05 are false positives!!
+falsePositiveFraction(ATF3knockoutBUM, pValueThreshold = 0.05)/(falsePositiveFraction( ATF3knockoutBUM, pValueThreshold = 0.05) + truePositiveFraction(ATF3knockoutBUM, pValueThreshold = 0.05))
+
+
+TF_pvals <- GSE74362_diffexDT[TTRUST_TF2targets_DT %>% 
+                    .[!is.na(geneID), .(TF, geneID)], , on = "geneID"] %>% 
+                    .[,.(geneSets = list(P.Value)), by = TF]
+
+TF_pvals_list <- TF_pvals[, geneSets]
+names(TF_pvals_list) <- TF_pvals[, TF]
+
+betaUnifPs <- sapply(TF_pvals_list, betaUniformPvalueSumTest, betaUniformFit = ATF3knockoutBUM)
+fisherPs <- sapply(TF_pvals_list, fishersPvalueSumTest)
+
+summaryDT <- data.table(TF = names(resPs),
+                        metaDEGthP = resPs,
+                        fiserP = fisherPs)
+
+summaryDT[, metaDEGthQ := p.adjust(metaDEGthP, "fdr")]
+summaryDT[, fisherQ := p.adjust(fiserP, "fdr")]
+
+summaryDT[order(metaDEGthQ)]
+```
+
+
