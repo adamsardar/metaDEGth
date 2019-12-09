@@ -1,0 +1,116 @@
+---
+title: "OCT4 knockout"
+author: "Adam Sardar"
+date: "12/9/2019"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+
+
+parsedSOFT_GSE100118 <- getGEO(GEO = "GSE100118", GSEMatrix = FALSE, AnnotGPL = FALSE, getGPL = FALSE)
+
+
+GSE100118_studyMetadata <- map_dfr(parsedSOFT@gsms,
+        ~ {sampleAttr <- .x@header$characteristics_ch1
+        
+           experimentDetails <- .x@header$characteristics_ch1
+           
+           DT <- data.table(
+              study = .x@header$geo_accession,
+              sample_type = experimentDetails[grepl("sample type", experimentDetails)],
+              condition =  experimentDetails[grepl("embryo", experimentDetails)],
+              study_title = str_remove(.x@header$title," \\(RNA-Seq\\)") )
+          
+            return(DT)}  )
+
+GSE100118_studyMetadata[, type := str_remove(sample_type,"sample type: ") %>% str_replace_all(" ","_") , by = condition]
+
+GSE100118_studyMetadata[, subgroup := str_remove(condition,"embryo number: ") %>% str_replace_all(" ","_") , by = condition]
+GSE100118_studyMetadata[, experiment := str_extract(subgroup, "(Cas9_Injected_control|CRISPR)"), by = subgroup]
+
+setkey(GSE100118_studyMetadata, study_title)
+
+
+#GSE100118_studyMetadata[type != "Single_cell", experiment := "biopsy"]
+# GSE100118_studyMetadata[type != "Single_cell", subgroup := "biopsy"]
+```
+
+
+```{r}
+
+GSE100118_rpkm <- fread("zcat /mnt/c/Users/ASardar/Downloads/GSE100118_scRNA_pou5f1crispr_rpkm_170603.csv.gz",
+                        skip = 2, header = TRUE)
+
+# Columns are ordered using a frustrating cell ID system.
+altCellIDordering <-fread("zcat /mnt/c/Users/ASardar/Downloads/GSE100118_scRNA_pou5f1crispr_rpkm_170603.csv.gz",
+      skip = 1, header = TRUE, nrows = 1) %>% colnames %>% .[-1:-2]
+
+colnames(GSE100118_rpkm)[-1:-2] <- altCellIDordering # Label expression set consistently
+
+
+#Check that sample names line up
+GSE100118_studyMetadata[!study_title  %in% altCellIDordering]
+
+altCellIDordering[!altCellIDordering %in% GSE100118_studyMetadata$study_title]
+
+#Manual changes to bring the files back in to alignment
+GSE100118_studyMetadata[study_title == "8.6", study_title := "8.6."]
+GSE100118_studyMetadata[study_title == "C12.8", study_title := "C12.8."]
+GSE100118_studyMetadata[study_title == "C8.TE.2", study_title := "C8.TE2"]
+GSE100118_studyMetadata[study_title == "C8.TEb", study_title := "C8.Teb"]
+```
+
+```{r}
+
+exprsMatrix_GSE100118 <- GSE100118_rpkm[,as.matrix(.SD, rownames = Ensembl), .SDcols = !c("Ensembl","Gene")]
+
+
+
+GSE100118_designMat <- sparse.model.matrix(study_title ~ 0 + experiment + subgroup,
+                                   GSE100118_studyMetadata)
+
+row.names(GSE100118_designMat) <- GSE100118_studyMetadata[,study_title]
+
+colnames(GSE100118_designMat) %<>% str_remove("experiment")
+
+
+GSE74362_ATF3contrastMat <- makeContrasts(
+              contrasts = "Cas9_Injected_control-CRISPR",
+              levels = GSE100118_designMat)
+
+gm_mean = function(x, na.rm=TRUE){ exp(sum(log(x[x > 0]), na.rm=na.rm) / length(x)) }
+
+geneAbundances <- data.table(ENSG = row.names(exprsMatrix_GSE100118),
+                          gm_abundance = apply(exprsMatrix_GSE100118, 1, gm_mean) )
+
+
+GSE100118_lmFit <- lmFit( log(exprsMatrix_GSE100118[ geneAbundances[gm_abundance > 1.01, ENSG], ]) ,
+                         design = GSE100118_designMat) %>%
+                  contrasts.fit(contrasts = GSE74362_ATF3contrastMat) %>%
+                  eBayes
+
+
+GSE100118_diffexDT <- data.table(topTable(GSE100118_lmFit, number = Inf), keep.rownames = TRUE )
+setnames(GSE100118_diffexDT, "rn", "ensembl")
+
+GSE100118_diffexDT[ GSE100118_rpkm, geneSymbol := i.Gene, on = .(ensembl == Ensembl)] 
+
+
+GSE100118_diffexDT[,qplot(P.Value)]
+
+
+GSE100118_diffexDT[geneSymbol %in% c('TMSB10',
+'GDF5',
+'RPL35A',
+'LINC01427',
+'RP11-153M7.3',
+'ZKSCAN2',
+'SLC6A4',
+'RPS26P3')]
+
+```
+
+
