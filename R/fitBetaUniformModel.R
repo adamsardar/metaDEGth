@@ -59,7 +59,7 @@ setMethod("fitBetaUniformMixtureDistribution",
             
             bestFit <- which.max(modelLLHs)
             if (length(bestFit) == 0) { stop("Beta-Uniform model could not be fitted to data") }
-            if(sd(modelLLHs) > 5) warning("log-likelihoods are very diverse - it might be worth increasing the 'nStarts' parameter.")
+            if(sd(modelLLHs) > 3) warning("log-likelihoods are very diverse - it might be worth increasing the 'nStarts' parameter, else accepting that parameter estimates are a little unstable")
             
             bestFittedBetaUniformModelParam <- fittedBetaUniformModelParams[!failedOptimisationRuns][[bestFit]]
             
