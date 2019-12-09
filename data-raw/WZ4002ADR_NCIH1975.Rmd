@@ -1,8 +1,10 @@
 ---
 title: "Aquired resistence to third line TKI in NCI-H1975 cell lines"
 author: "Adam Sardar"
-date: "5 November 2015"
+date: "9 December 2019"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 [GSE37699](http://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE37699)
