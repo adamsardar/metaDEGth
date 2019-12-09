@@ -1,0 +1,11 @@
+---
+title: "Aquired resistence to third line TKI in NCI-H1975 cell lines"
+author: "Adam Sardar"
+date: "5 November 2015"
+output: html_document
+---
+
+[GSE37699](http://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE37699)
+
+A pretty straighforward experiment; the authors prepare cell lines that are resistent to WZ4002 (a third generation TKI) and then compare the expression of the two cell lines. Prepared in triplicate and measured on Affymetrix Human Genome U133A 2.0 Arrays.
+
