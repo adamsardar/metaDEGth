@@ -21,4 +21,141 @@ Studying the associated paper "Activation of the AXL Kinase Causes Resistance to
  
 Lets take a look for ourselves shall we?
 
-The technology used was the Illumina HumanHT-12 V3.0 expression beadchip
+The technology used was the Illumina HumanHT-12 V3.0 expression beadchip. We shall use the limma neqc function and downstrema pipeline.
+
+```{r}
+library(data.table)
+library(GEOquery)
+library(purrr)
+library(stringr)
+library(magrittr)
+
+parsedGSE38310SOFT <- getGEO(GEO = "GSE38310", GSEMatrix = FALSE, AnnotGPL = FALSE, getGPL = TRUE)
+
+GSE38310_unnormalised_RAW_DT <- fread(
+  cmd = "curl ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE38nnn/GSE38310/suppl/GSE38310_non_normalized.txt.gz | zcat",
+  check.names = TRUE)
+
+# Copied from the GSE38310 page
+GSE38310_sampleAnnot <- fread(
+"GSM938752,HCC827_DMSO_12h,rep1
+GSM938753,HCC827_DMSO_12h,rep2
+GSM938754,HCC827_DMSO_12h,rep3
+GSM938755,HCC827_erlotinib_12h,rep1
+GSM938756,HCC827_erlotinib_12h,rep2
+GSM938757,HCC827_erlotinib_12h,rep3
+GSM938758,ER3_DMSO_12h,rep1
+GSM938759,ER3_DMSO_12h,rep2
+GSM938760,ER3_DMSO_12h,rep3
+GSM938761,ER3_erlotinib_12h,rep1
+GSM938762,ER3_erlotinib_12h,rep2
+GSM938763,ER3_erlotinib_12h,rep3
+GSM938764,T15-2_DMSO_12h,rep1
+GSM938765,T15-2_DMSO_12h,rep2
+GSM938766,T15-2_DMSO_12h,rep3
+GSM938767,T15-2_erlotinib_12h,rep1
+GSM938768,T15-2_erlotinib_12h,rep2
+GSM938769,T15-2_erlotinib_12h,rep3", 
+header = FALSE, sep= ",", col.names = c("GSM", "sample","rep"))
+
+
+
+# I have to make the uncomfortable assumption that these two sets are sorted in the same way ...
+GSE38310_sampleAnnot %<>% .[,.(treatment = c(make.names(sample), str_c(make.names(sample),"_pVal") )), by = .(GSM,rep)]
+
+
+GSE38310_sampleAnnot[, type := "measure"]
+GSE38310_sampleAnnot[treatment %like% "pVal", type := "detect"]
+GSE38310_sampleAnnot[treatment == "HumanHT12v4probeID", type := "probeID"]
+
+GSE38310_sampleAnnot[, colName := str_c(treatment,"_",rep)]
+
+setnames(GSE38310_unnormalised_RAW_DT, GSE38310_sampleAnnot[, c("HumanHT12v4probeID",colName)])
+
+# Matched that of illumina beadchips
+GPL10558_annot_DT <- data.table(parsedGSE38310SOFT@gpls$GPL6947@dataTable@table)
+```
+
+
+
+```{r Normalise Raw Measurements}
+
+library(limma)
+
+exprsMat <- GSE38310_unnormalised_RAW_DT[, 
+                                    as.matrix(.SD, rownames = HumanHT12v4probeID),
+                    .SDcols = GSE38310_sampleAnnot[type == "measure", colName] ]
+
+detectionPvalueMat <- GSE38310_unnormalised_RAW_DT[,
+                                    as.matrix(.SD, rownames = HumanHT12v4probeID),
+                    .SDcols = GSE38310_sampleAnnot[type == "detect", colName] ]
+
+GSE38310_expObj <- neqc(x = exprsMat,
+                        detection.p = detectionPvalueMat)
+```
+
+
+```{r Produce contrast and design matricies}
+
+GSE38310_designMat <- model.matrix(colName ~ 0 + treatment,
+                                   GSE38310_sampleAnnot[type == "measure"])
+
+colnames(GSE38310_designMat) %<>% str_remove("treatment")
+row.names(GSE38310_designMat) <- GSE38310_sampleAnnot[type == "measure", colName]
+
+
+GSE38310_contrastMat <- makeContrasts(
+              contrasts = c("HCC827_DMSO_12h-HCC827_erlotinib_12h",
+                            "ER3_DMSO_12h-ER3_erlotinib_12h",
+                            "T15.2_DMSO_12h-T15.2_erlotinib_12h"),
+              levels = GSE38310_designMat)
+```
+
+```{r Fit model and compute differential expression}
+GSE38310_lmFit <- lmFit(GSE38310_expObj,
+                        design = GSE38310_designMat) %>%
+                  contrasts.fit(contrasts = GSE38310_contrastMat) %>%
+                  eBayes
+
+
+erlotinibHCC827_diffexDT <- data.table(topTable(GSE38310_lmFit, number = Inf, adjust.method = "fdr",
+                                                coef = "HCC827_DMSO_12h-HCC827_erlotinib_12h"), keep.rownames = TRUE )
+
+setnames(erlotinibHCC827_diffexDT, 
+         c("rn","logFC","P.Value"),
+         c("HumanHT12v3probeID","HCC827_logFC","HCC827_pValue"))
+
+erlotinibER3_diffexDT <- data.table(topTable(GSE38310_lmFit, number = Inf, adjust.method = "fdr",
+                                             coef = "ER3_DMSO_12h-ER3_erlotinib_12h"), keep.rownames = TRUE )
+
+setnames(erlotinibER3_diffexDT, 
+         c("rn","logFC","P.Value"),
+         c("HumanHT12v3probeID","ER3_logFC","ER3_pValue"))
+
+erlotinibT15.2_diffexDT <- data.table(topTable(GSE38310_lmFit, number = Inf, adjust.method = "fdr",
+                                               coef = "T15.2_DMSO_12h-T15.2_erlotinib_12h"), keep.rownames = TRUE )
+
+setnames(erlotinibT15.2_diffexDT, 
+         c("rn","logFC","P.Value"),
+         c("HumanHT12v3probeID","T15.2_logFC","T15.2_pValue"))
+
+
+erlotinib_ADRcellLines <- 
+  erlotinibHCC827_diffexDT[,.SD,.SDcols = !c("t","B","AveExpr","adj.P.Val")] %>%
+    merge(erlotinibER3_diffexDT[,.SD,.SDcols = !c("t","B","AveExpr","adj.P.Val")], by = "HumanHT12v3probeID") %>%
+    merge(erlotinibT15.2_diffexDT[,.SD,.SDcols = !c("t","B","AveExpr","adj.P.Val")], by = "HumanHT12v3probeID") %>%
+    merge(GPL10558_annot_DT[,.(HumanHT12v3probeID=ID,
+                             geneID=Entrez_Gene_ID,
+                             geneSymbol = Symbol)], ., by = "HumanHT12v3probeID")
+```
+
+
+```{r Save as package datafile}
+
+setorder(erlotinib_ADRcellLines, HCC827_pValue)
+
+save(erlotinib_ADRcellLines,
+     file = "./data/erlotinib_ADRcellLines.RData",
+     compress = "xz")
+```
+
