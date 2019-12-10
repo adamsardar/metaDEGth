@@ -283,12 +283,15 @@ siTAZdiffex_DT %<>% merge(
   swissprotIDmappingssubset[,.(accession,name,geneID,ENSG)],
   by = "ENSG", all.x = TRUE)
 
-setorder(siTAZdiffex_DT, siTAZ1_qValue )
+
+siTAZdiffex_DT <- siTAZdiffex_DT[,.(ENSG, geneSymbol, accession, name, geneID, siTAZ1_logFC, siTAZ1_pValue, siTAZ2_logFC, siTAZ2_pValue)] # Only save important fields
+
+setorder(siTAZdiffex_DT, siTAZ1_pValue )
 
 #Write the results out to a data file for inclusion in the package
 save(siTAZdiffex_DT, file = "./data/siTAZdiffex_DT.RData", compress = "xz")
 
-siTAZdiffex_DT[siTAZ1_qValue < 1E-3][order(-siTAZ1_logFC)]
+siTAZdiffex_DT[ p.adjust(siTAZ1_pValue,"fdr") < 1E-3][order(-siTAZ1_logFC)]
 ```
 
 What's at the top of the list? [Stanniocalcin](https://en.wikipedia.org/wiki/Stanniocalcin), which is a glycoprotein that controls calcium and phosphate - need I remind you that this study was within [fibrosis](https://www.nature.com/articles/srep18117).
