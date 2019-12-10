@@ -5,6 +5,8 @@ date: "9 December 2019"
 output: html_document
 ---
 
+[GSE38302](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE38302)
+
 This study continues on from GSE37699, which studies WZ4002 application to gefitinib insensitive cell lines. The authors have further expanded the study with a variety of PC9 derived cell lines:
 
 PC9 : parental, unmodified cell line
@@ -12,3 +14,4 @@ PC9-GR2 : A gefitinib resistant cell line that took 6 weeks to develop resistanc
 PC9-GR3 : A gefitinib resistant cell line that took 24 weeks to develop resistance
 PC9_GT : A gefitinib tolerant cell line
 PC9_WT : A WZ4002 tolerant cell line
+
