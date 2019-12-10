@@ -14,6 +14,11 @@
 #' library(ggplot2)
 #' data(rAAVATF3_diffexDT)
 #' 
+#' rAAVATF3_diffexDT %>% ggplot(aes(x = koATF3_logFC, y = -log10(koATF3_pValue))) + 
+#'     geom_point(aes(colour = p.adjust(koATF3_pValue, "fdr") < 0.05)) +
+#'     scale_colour_manual(values = c("darkgrey","dodgerblue")) +
+#'     theme_bw()
+#' 
 #' suppressWarnings(ATF3knockout_betaUniformModel <- fitBetaUniformMixtureDistribution(rAAVATF3_diffexDT$P.Value, nStarts = 5)) # LLH fluctates a bit as we are on the bounds of parameter space!
 #' 
 #' #Notice - little to no signal!

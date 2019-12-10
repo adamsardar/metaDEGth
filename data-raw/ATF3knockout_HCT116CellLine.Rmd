@@ -157,7 +157,9 @@ So there is almost no signal in this dataset!! Any method should be robust to th
 
 ```{r}
 
-rAAVATF3_diffexDT <- GSE74362_diffexDT
+rAAVATF3_diffexDT <- GSE74362_diffexDT[,.(HumanHT12v4probeID, geneID, geneSymbol, koATF3_logFC = logFC, koATF3_pValue = P.Value)]
+
+setorder(rAAVATF3_diffexDT, koATF3_pValue)
 
 save(rAAVATF3_diffexDT, file = "./data/rAAVATF3_diffexDT.RData", compress = "xz")
 ```
