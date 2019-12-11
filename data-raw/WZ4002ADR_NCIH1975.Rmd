@@ -108,8 +108,10 @@ setcolorder(WZ4002_adrH1975_diffexDT, c("HG_U133A_2_ID","geneSymbol","geneID"))
 ```{r}
 
 WZ4002_adrH1975_diffexDT %>%
-  ggplot(aes(x = H1975_logFC, y = -log10(H1975_pValue))) +
-  geom_point()
+ ggplot(aes(x = H1975_logFC, y = -log10(H1975_pValue))) +
+     geom_point(aes(colour = p.adjust(H1975_pValue) < 0.01 )) +
+     scale_colour_manual(values = c("darkgrey","dodgerblue")) +
+     theme_bw() 
 
 setorder(WZ4002_adrH1975_diffexDT, H1975_pValue)
 
