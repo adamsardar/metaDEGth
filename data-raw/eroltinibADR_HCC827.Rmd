@@ -140,7 +140,7 @@ setnames(erlotinibT15.2_diffexDT,
          c("HumanHT12v3probeID","T15.2_logFC","T15.2_pValue"))
 
 
-erlotinib_ADRcellLines <- 
+erlotinib_adrHCC827_diffexDT <- 
   erlotinibHCC827_diffexDT[,.SD,.SDcols = !c("t","B","AveExpr","adj.P.Val")] %>%
     merge(erlotinibER3_diffexDT[,.SD,.SDcols = !c("t","B","AveExpr","adj.P.Val")], by = "HumanHT12v3probeID") %>%
     merge(erlotinibT15.2_diffexDT[,.SD,.SDcols = !c("t","B","AveExpr","adj.P.Val")], by = "HumanHT12v3probeID") %>%
@@ -152,10 +152,13 @@ erlotinib_ADRcellLines <-
 
 ```{r Save as package datafile}
 
-setorder(erlotinib_ADRcellLines, HCC827_pValue)
+erlotinib_adrHCC827_diffexDT
 
-save(erlotinib_ADRcellLines,
-     file = "./data/erlotinib_ADRcellLines.RData",
+
+setorder(erlotinib_adrHCC827_diffexDT, HCC827_pValue)
+
+save(erlotinib_adrHCC827_diffexDT,
+     file = "./data/erlotinib_adrHCC827_diffexDT.RData",
      compress = "xz")
 ```
 
