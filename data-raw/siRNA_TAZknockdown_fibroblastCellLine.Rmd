@@ -53,7 +53,7 @@ kallisto index -i Homo_sapiens.GRCh38.cDNA.idx /tmp/Homo_sapiens.GRCh38.cdna.all
 Kallisto requires a fragment length and standard deviation estimate, but we do not have access to the bioanalyser result! As a result, we'll use a value in rought the 150-200 range and use (roughly) a poisson standard deviation.
 
 ```{bash}
-time cut -f 1 ../SRP064305details.tsv | grep 'SRR' | parallel -j 1 kallisto quant --single  -l 180 -s 15 -t 10 -i ../Homo_sapiens.GRCh38.idx -o ./{} ../FASTQ/{}.fastq.gz
+time cut -f 1 ../SRP064305details.tsv | grep 'SRR' | parallel -j 1 kallisto quant --single  -l 180 -s 15 -t 10 -i ../Homo_sapiens.GRCh38.cDNA.idx -o ./{} ../FASTQ/{}.fastq.gz
 ```
 
 Takes under 10 minutes.
@@ -284,14 +284,14 @@ siTAZdiffex_DT %<>% merge(
   by = "ENSG", all.x = TRUE)
 
 
-siTAZdiffex_DT <- siTAZdiffex_DT[,.(ENSG, geneSymbol, accession, name, geneID, siTAZ1_logFC, siTAZ1_pValue, siTAZ2_logFC, siTAZ2_pValue)] # Only save important fields
+siTAZdiffex_HFL1_DT <- siTAZdiffex_DT[,.(ENSG, geneSymbol, accession, name, geneID, siTAZ1_logFC, siTAZ1_pValue, siTAZ2_logFC, siTAZ2_pValue)] # Only save important fields
 
-setorder(siTAZdiffex_DT, siTAZ1_pValue )
+setorder(siTAZdiffex_HFL1_DT, siTAZ1_pValue )
 
 #Write the results out to a data file for inclusion in the package
-save(siTAZdiffex_DT, file = "./data/siTAZdiffex_DT.RData", compress = "xz")
+save(siTAZdiffex_HFL1_DT, file = "./data/siTAZdiffex_HFL1_DT.RData", compress = "xz")
 
-siTAZdiffex_DT[ p.adjust(siTAZ1_pValue,"fdr") < 1E-3][order(-siTAZ1_logFC)]
+siTAZdiffex_HFL1_DT[ p.adjust(siTAZ1_pValue,"fdr") < 1E-3][order(-siTAZ1_logFC)]
 ```
 
 What's at the top of the list? [Stanniocalcin](https://en.wikipedia.org/wiki/Stanniocalcin), which is a glycoprotein that controls calcium and phosphate - need I remind you that this study was within [fibrosis](https://www.nature.com/articles/srep18117).

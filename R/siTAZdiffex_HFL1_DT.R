@@ -1,6 +1,6 @@
-#' Differential expression from RNAseq assay of TAZ siRNA knockdowns
+#' Differential expression from RNAseq assay of TAZ siRNA knockdowns in HFL-1
 #' 
-#' GSE73555 studied genes regulated by the transcription co-factor TAZ in a lung fibroblast cell line. The authors used siRNA
+#' GSE73555 studied genes regulated by the transcription co-factor TAZ in a lung fibroblast cell line (HFL-1). The authors used siRNA
 #' to knock down the TAZ gene (aka WWTR1); two different siRNAs for TAZ and a negative control (NTC) siRNA. It serves 
 #' as a perfect 'spike-in' study for us to test gene set enrichment techniques against.
 #' 
@@ -8,14 +8,14 @@
 #' Kallisto before transcript abundances were estimated using limma-voom. Finally, differential gene expression values were computed.
 #' 
 #' @docType data
-#' @usage data(siTAZdiffex_DT)
+#' @usage data(siTAZdiffex_HFL1_DT)
 #' 
 #' @example
 #' 
 #' library(ggplot2)
-#' data(siTAZdiffex_DT)
+#' data(siTAZdiffex_HFL1_DT)
 #' 
-#' siTAZdiffex_DT %>% ggplot(aes(x = siTAZ1_logFC, y = -log10(siTAZ1_pValue))) + 
+#' siTAZdiffex_HFL1_DT %>% ggplot(aes(x = siTAZ1_logFC, y = -log10(siTAZ1_pValue))) + 
 #'     geom_point(aes(colour = p.adjust(siTAZ1_pValue, "fdr") < 0.01)) +
 #'     scale_colour_manual(values = c("darkgrey","dodgerblue")) +
 #'     theme_bw()
@@ -25,4 +25,4 @@
 #' @references Pimentel H, Bray NL, Puente S, Melsted P, Pachter L. Differential analysis of RNA-seq incorporating quantification uncertainty. Nat Methods. 2017
 #' @references Law CW, Chen Y, Shi W, Smyth GK. voom: Precision weights unlock linear model analysis tools for RNA-seq read counts. Genome Biol. 2014
 #' @format A data.table with 14,501 rows, documenting differential gene expression (logFC and unadjusted P-values) of 14,475 ENSEMBL gene entities in two experimental conditions (siTAZ1 and siTAZ2). Addition gene symbols, entrez gene IDs and uniprot annotations also included (duplicated ENSG entries result from many-to-one mappings)
-"siTAZdiffex_DT"
+"siTAZdiffex_HFL1_DT"
