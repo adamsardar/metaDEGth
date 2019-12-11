@@ -14,6 +14,7 @@ Encoding: UTF-8
 Imports:
     data.table (>= 1.11.0),
     assertthat (>= 0.2),
+    ggplot2 (>= 1.0),
     purrr (>= 0.2),
     magrittr (>= 1.5),
     stringr (>= 1.2)
@@ -27,11 +28,13 @@ Collate:
     'BetaUniformModel_S4Class.R'
     'Pvalues_S4Class.R'
     'TTRUST_TFtarget_relationships.R'
+    'WZ4002_adrH1975_diffexDT.R'
     'betaUniformPvalueSumTest.R'
     'betaUniformScore.R'
+    'cas9OCT4_hsZygote_diffex_DT.R'
+    'erlotinib_ADRcellLines.R'
     'fishersPvalueSumTest.R'
     'fitBetaUniformModel.R'
     'metaDEGth-package.R'
-    'plotPvalues.R'
-    'siTAZdiffex_DT.R'
+    'siTAZdiffex_HFL1_DT.R'
     'validators.R'
