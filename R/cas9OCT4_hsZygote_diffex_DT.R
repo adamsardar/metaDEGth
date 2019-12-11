@@ -8,7 +8,7 @@
 #' @docType data
 #' @usage data(cas9OCT4_hsZygote_diffex_DT)
 #' 
-#' @example
+#' @examples
 #' library(ggplot2)
 #' data(cas9OCT4_hsZygote_diffex_DT)
 #' 
