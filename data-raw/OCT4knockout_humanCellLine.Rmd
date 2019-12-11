@@ -1,5 +1,5 @@
 ---
-title: "OCT4 knockout"
+title: "OCT4 knockout in human embryos"
 author: "Adam Sardar"
 date: "12/9/2019"
 output: html_document
@@ -7,13 +7,40 @@ editor_options:
   chunk_output_type: console
 ---
 
-```{r}
+GSE100118 is a cool experiment! CRISPR knockdown of the pluripotency transcription factor OCT4 during human embryogenesis. This is a nice complement to the siRNA and small-molecule peturbagen experiments. Plus it's a dataset generated using CRISPR and human embryos
 
+
+```{r}
+library(data.table)
+
+SRP113531details <-  fread("http://trace.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?save=efetch&db=sra&rettype=runinfo&term=SRP113531")
+
+fwrite(SRP113531details, "/mnt/c/GSE73555/SRP113531details.tsv", sep = "\t", quote = FALSE)
+```
+
+```{bash}
+time cut -f 1 ../SRP113531details.tsv | grep 'SRR' | parallel -j 5 'fasterq-dump {} -e 4 -t /tmp/scratch && pigz -p 4 {}_*.fastq'
+```
+
+This took quite a while! It's almost 100 RNAseq datasets (notice the zip command after fasterqdump - you will have no disk space left otherwise!)
+
+Whilst this is a single-cell RNAseq data set, it's not from bulk tissue so there is no need to perform the cell-type determination study after the collection of data.
+
+This makes things quite easy - we can treat it as though it were a 'normal' RNAseq experiment.
+
+```{bash}
+time cut -f 1 ../SRP113531details.tsv | grep 'SRR' | parallel -j 1 ~/Programs/kallisto/kallisto quant -t 10 -i ../Homo_sapiens.GRCh38.cDNA.idx -o ./{} ../FASTQ/{}_1.fastq.gz ../FASTQ/{}_2.fastq.gz
+```
+
+So. Fast. kallisto is a game changed for analysis pipelines. Took 90 minutes (roughly a minute per sample!).
+
+
+```{r}
 
 parsedSOFT_GSE100118 <- getGEO(GEO = "GSE100118", GSEMatrix = FALSE, AnnotGPL = FALSE, getGPL = FALSE)
 
 
-GSE100118_studyMetadata <- map_dfr(parsedSOFT@gsms,
+GSE100118_studyMetadata <- map_dfr(parsedSOFT_GSE100118@gsms,
         ~ {sampleAttr <- .x@header$characteristics_ch1
         
            experimentDetails <- .x@header$characteristics_ch1
@@ -34,83 +61,188 @@ GSE100118_studyMetadata[, experiment := str_extract(subgroup, "(Cas9_Injected_co
 setkey(GSE100118_studyMetadata, study_title)
 
 
-#GSE100118_studyMetadata[type != "Single_cell", experiment := "biopsy"]
-# GSE100118_studyMetadata[type != "Single_cell", subgroup := "biopsy"]
+GSE100118_studyMetadata[type != "Single_cell", experiment := "biopsy"]
+GSE100118_studyMetadata[type != "Single_cell", subgroup := "biopsy"]
+```
+
+
+
+```{r import transcript to gene mapping}
+
+library(data.table)
+
+#Suck out the ENST to ENSG (and gene Symbol) mapping from the GTF file, downloaded to /tmp/
+ENST2ENSG <- fread('zcat /tmp/Homo_sapiens.GRCh38.cdna.all.fa.gz | grep "^>" | perl -pe "s/(>|chromosome:|gene:|GRCh38:|gene_biotype:|transcript_biotype:|gene_symbol:)//g" | perl -ne "s/\\s+/\\t/g; CORE::say $_" | cut -f1-7 ' , header = FALSE, fill = TRUE)
+
+colnames(ENST2ENSG) <- c("ENST","havanaStatus","chromosome","ENSG","geneStatus","geneStatus","geneSymbol")
+```
+
+
+# Importing transcript data
+
+```{r limma voom meanVariance trend}
+
+library(limma)
+library(edgeR)
+library(tximport)
+
+projDir <- "/mnt/c/GSE100118/"
+
+# Each kallisto alignment run produces a director (labelled by the SRR ID), with an hdf5 file
+# We shall add a column with file locations to our experimental details table
+
+SRP113531details[,path := str_c(projDir,"alignedReads/",Run,"/abundance.tsv")]
+
+
+GSM2study <- GSE100118_studyMetadata[experiment != "biopsy", study]
+
+# Notice that we pass in a transcript to gene mapping (tx2gene) and that we normalise TPM. See tximport documentation for more details
+kallistoTranscriptEstimates <- tximport(files = SRP113531details[SampleName %in% GSM2study, path],
+                                        type = "kallisto",
+                                        tx2gene = ENST2ENSG[,.(ENST,ENSG)],
+                                        countsFromAbundance = "lengthScaledTPM",
+                                        dropInfReps = TRUE)
+# Could use the hdf5 files for faster import, but installing the tools on centOS is a pig
+
+# A function for computing the geometic mean of a series of observation
+# See https://en.wikipedia.org/wiki/Geometric_mean
+gm_mean = function(x, na.rm=TRUE){ exp(sum(log(x[x > 0]), na.rm=na.rm) / length(x)) }
+
+geneAbundances <- data.table(ENSG = row.names(kallistoTranscriptEstimates$abundance),
+                          gm_abundance = apply(kallistoTranscriptEstimates$abundance, 1, gm_mean) )
+
+colnames(kallistoTranscriptEstimates$counts) <-  SRP113531details[SampleName %in% GSM2study, SampleName]
+
+# Low quantified transcripts/genes can introduce strange artifacts. Filter these out with a very, very low cutoff. We only want to remove the lowest expressed genes
+transcriptDGElist <- kallistoTranscriptEstimates$counts %>% 
+  .[ geneAbundances[gm_abundance > 1.01, ENSG], ] %>%
+  DGEList
+transcriptDGElist %<>% calcNormFactors
 ```
 
 
 ```{r}
 
-GSE100118_rpkm <- fread("zcat /mnt/c/Users/ASardar/Downloads/GSE100118_scRNA_pou5f1crispr_rpkm_170603.csv.gz",
-                        skip = 2, header = TRUE)
-
-# Columns are ordered using a frustrating cell ID system.
-altCellIDordering <-fread("zcat /mnt/c/Users/ASardar/Downloads/GSE100118_scRNA_pou5f1crispr_rpkm_170603.csv.gz",
-      skip = 1, header = TRUE, nrows = 1) %>% colnames %>% .[-1:-2]
-
-colnames(GSE100118_rpkm)[-1:-2] <- altCellIDordering # Label expression set consistently
+GSE100118_designMat <- model.matrix(study ~ 0 + experiment + subgroup,
+                                   GSE100118_studyMetadata[experiment != "biopsy"])
 
 
-#Check that sample names line up
-GSE100118_studyMetadata[!study_title  %in% altCellIDordering]
+### Two additional matricies for testing designs and ensuring that we have the best model
+GSE100118_designMat2 <- model.matrix(study ~ 0 + subgroup,
+                                   GSE100118_studyMetadata[experiment != "biopsy"])
 
-altCellIDordering[!altCellIDordering %in% GSE100118_studyMetadata$study_title]
+GSE100118_designMat3 <- model.matrix(study ~ 0 + experiment,
+                                   GSE100118_studyMetadata[experiment != "biopsy"])
+###
 
-#Manual changes to bring the files back in to alignment
-GSE100118_studyMetadata[study_title == "8.6", study_title := "8.6."]
-GSE100118_studyMetadata[study_title == "C12.8", study_title := "C12.8."]
-GSE100118_studyMetadata[study_title == "C8.TE.2", study_title := "C8.TE2"]
-GSE100118_studyMetadata[study_title == "C8.TEb", study_title := "C8.Teb"]
-```
-
-```{r}
-
-exprsMatrix_GSE100118 <- GSE100118_rpkm[,as.matrix(.SD, rownames = Ensembl), .SDcols = !c("Ensembl","Gene")]
-
-
-
-GSE100118_designMat <- sparse.model.matrix(study_title ~ 0 + experiment + subgroup,
-                                   GSE100118_studyMetadata)
-
-row.names(GSE100118_designMat) <- GSE100118_studyMetadata[,study_title]
+row.names(GSE100118_designMat) <- GSE100118_studyMetadata[experiment != "biopsy",study]
 
 colnames(GSE100118_designMat) %<>% str_remove("experiment")
 
-
-GSE74362_ATF3contrastMat <- makeContrasts(
-              contrasts = "Cas9_Injected_control-CRISPR",
+GSE100118_contrastMat <- makeContrasts(
+              contrasts = "CRISPR-Cas9_Injected_control",
               levels = GSE100118_designMat)
 
-gm_mean = function(x, na.rm=TRUE){ exp(sum(log(x[x > 0]), na.rm=na.rm) / length(x)) }
+voomTrendModelFromCounts <- voom(transcriptDGElist, GSE100118_designMat, plot = TRUE)
 
-geneAbundances <- data.table(ENSG = row.names(exprsMatrix_GSE100118),
-                          gm_abundance = apply(exprsMatrix_GSE100118, 1, gm_mean) )
-
-
-GSE100118_lmFit <- lmFit( log(exprsMatrix_GSE100118[ geneAbundances[gm_abundance > 1.01, ENSG], ]) ,
-                         design = GSE100118_designMat) %>%
-                  contrasts.fit(contrasts = GSE74362_ATF3contrastMat) %>%
-                  eBayes
+modePrefs <- selectModel(voomTrendModelFromCounts, list(GSE100118_designMat, GSE100118_designMat2, GSE100118_designMat3), "aic")
+table(modePrefs$pref) # Looks like model one is best. It's certainly the easiest for us to process!
 
 
-GSE100118_diffexDT <- data.table(topTable(GSE100118_lmFit, number = Inf), keep.rownames = TRUE )
+
+GSE100118_fit <- lmFit(voomTrendModelFromCounts, GSE100118_designMat)
+
+GSE100118_model <- contrasts.fit(GSE100118_fit, contrasts = GSE100118_contrastMat) %>% eBayes
+
+GSE100118_diffexDT <- data.table(topTable(GSE100118_model, number = Inf), keep.rownames = TRUE )
 setnames(GSE100118_diffexDT, "rn", "ensembl")
 
-GSE100118_diffexDT[ GSE100118_rpkm, geneSymbol := i.Gene, on = .(ensembl == Ensembl)] 
+GSE100118_diffexDT[ENST2ENSG, geneSymbol := i.geneSymbol, on = .(ensembl == ENSG)][order(P.Value)]
+
+GSE100118_diffexDT[,ensembl := str_extract(ensembl, "ENSG0\\d+")]
+
+paperValues <- fread("./data-raw/paper_diffex_OCT4.txt")
+
+merge(GSE100118_diffexDT, paperValues, by.x = "ensembl", by.y = "Ensembl") %>%
+  .[p.adjust(P.Value,"fdr") <= 0.05] %>%
+  ggplot(aes(x = log2FoldChange, y = logFC)) +
+  geom_point(aes(colour = adj.P.Val  <= 0.05)) +
+  geom_abline() + theme_bw()
 
 
-GSE100118_diffexDT[,qplot(P.Value)]
+ENSG00000169059_values <- transcriptDGElist$counts[row.names(transcriptDGElist$counts) %like% "ENSG00000169059",] %>% 
+  data.frame(counts = .) %>% 
+  data.table(keep.rownames = T)
 
+GSE100118_studyMetadata[ENSG00000169059_values, , on =.(study == rn)]
+# So tending towards being UP in the CRISPR samples
 
-GSE100118_diffexDT[geneSymbol %in% c('TMSB10',
-'GDF5',
-'RPL35A',
-'LINC01427',
-'RP11-153M7.3',
-'ZKSCAN2',
-'SLC6A4',
-'RPS26P3')]
-
+GSE100118_diffexDT[ensembl == "ENSG00000169059"]
 ```
 
 
+```{r Gene mapping}
+
+uniprotIDmappings <- fread("zcat /mnt/c/Uniprot/HUMAN_9606_idmapping_selected.tab.gz", header = FALSE)
+
+#We only really care about swissprot mappings
+#We only really care about swissprot mappings
+swissprot_accessions <- fread("zcat /mnt/c/Uniprot/uniprot_sprot.fasta.gz | grep '^>' | perl -ne 'm/sp\\|(\\w+)\\|/; CORE::say $1'", header = FALSE)
+
+swissprotIDmappingssubset <-  uniprotIDmappings[V1 %in% swissprot_accessions$V1][V19 != "", c(1,2,3,19)]
+colnames(swissprotIDmappingssubset) <- c("accession","name","geneID","ENSGgrouped")
+swissprotIDmappingssubset %<>% .[,.(ENSG = unlist(tstrsplit(ENSGgrouped, "; "))), by = .(accession, name, geneID, ENSGgrouped)]
+
+GSE100118_diffexDT %<>% merge(
+  swissprotIDmappingssubset[,.(accession,name,geneID,ENSG)],
+  by.x = "ensembl", by.y = "ENSG", all.x = TRUE)
+
+
+cas9OCT4_hsZygote_diffex_DT <- GSE100118_diffexDT[,.(ENSG = ensembl, geneSymbol, accession, name, geneID,
+                                            koOCT4_logFC = logFC, koOCT4_pValue = P.Value)] # Only save important fields
+
+setorder(cas9OCT4_hsZygote_diffex_DT, koOCT4_pValue)
+
+#Write the results out to a data file for inclusion in the package
+save(cas9OCT4_hsZygote_diffex_DT, file = "./data/cas9OCT4_hsZygote_diffex_DT.RData", compress = "xz")
+
+cas9OCT4_hsZygote_diffex_DT[ p.adjust(koOCT4_pValue,"fdr") < 1E-3][order(-koOCT4_logFC)]
+```
+
+
+```{r}
+
+OCTcrisprByGeneID <- cas9OCT4_hsZygote_diffex_DT[!is.na(geneID), .(geneID = as.integer(unlist(strsplit(geneID, "; ")))), by = .(ENSG, accession, koOCT4_pValue)]
+
+cas9OCT4_BUMod <- fitBetaUniformMixtureDistribution(OCTcrisprByGeneID$koOCT4_pValue)
+
+
+OCTcrisprByGeneID[, betaUnifScore_FDR0.05 := betaUniformScore(koOCT4_pValue, cas9OCT4_BUMod)]
+
+
+OCTcrisprByGeneID[TTRUST_TF2targets_DT[TF == "POU5F1"], , on = "geneID"]
+
+falsePositiveFraction(cas9OCT4_BUMod, pValueThreshold = 0.05)/(falsePositiveFraction( cas9OCT4_BUMod, pValueThreshold = 0.05) + truePositiveFraction(cas9OCT4_BUMod, pValueThreshold = 0.05))
+
+noiseFractionUpperBound(cas9OCT4_BUMod)
+
+TF_pvals <- OCTcrisprByGeneID[  unique(TTRUST_TF2targets_DT[!is.na(geneID), .(TF, geneID)]), , on = "geneID"] %>% 
+                    .[!is.na(koOCT4_pValue),.(geneSets = list(koOCT4_pValue), members = list(geneID)), by = TF]
+
+TF_pvals_list <- TF_pvals[, geneSets]
+names(TF_pvals_list) <- TF_pvals[, TF]
+
+betaUnifPs <- sapply(TF_pvals_list, betaUniformPvalueSumTest, betaUniformFit = cas9OCT4_BUMod)
+fisherPs <- sapply(TF_pvals_list, fishersPvalueSumTest)
+
+summaryDT <- data.table(TF = names(betaUnifPs),
+                        metaDEGthP = betaUnifPs,
+                        fiserP = fisherPs)
+
+summaryDT[, metaDEGthQ := p.adjust(metaDEGthP, "fdr")]
+summaryDT[, fisherQ := p.adjust(fiserP, "fdr")]
+
+summaryDT[order(metaDEGthQ)]
+```
+
+This is another focused dataset where TTRUST fails to pick out signal (or it's metaDEGth - also possible). I notice that NNANOG, a well known POU5F1 target is in there as diffexed ...
