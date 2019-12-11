@@ -11,12 +11,15 @@ editor_options:
 
 GSE74363: 	The Common Stress Responsive Transcription Factor ATF3 Binds Active Enhancers and Bookmarks Genomic Sites for Transcriptional Regulation. [Paper](https://www.ncbi.nlm.nih.gov/pubmed/27146783). The authors collect wildtype and ATF3 knockout expression using an illumina beadchip array (GEO dataset  GSE74362). This should serve as a spike-in dataset.
 
-The process used is similar to that 
+The raw data turned out to be two probe annotaiton files - no sign of expression. Sigh. I hate bioinformatics.
 
+Given that the end dataset had no signal and that I can't get ahold of the original data, I shan't include this in the package.
 
 # Import data
 
-Download the unnormalised zipped expression data directly from GEO, then annotate the columns and background normalise using limma::neqc. I tried downloaded the processed files and the P-value distribution was very odd - I suspect and artifact. 
+Download the unnormalised zipped expression data directly from GEO, then annotate the columns and background normalise using limma::neqc. I tried downloaded the processed files and the P-value distribution was very odd - I suspect and artifact. Also, the raw files 
+
+
 
 ```{r Read in data directly from GEO}
 
@@ -119,11 +122,11 @@ row.names(GSE74362_designMat) <- samples_GSE74362_metadataDT[type == "measure", 
 
 
 GSE74362_ATF3contrastMat <- makeContrasts(
-              contrasts = "WT_DMSO-E11_DMSO",
+              contrasts = "E11_DMSO-WT_DMSO",
               levels = GSE74362_designMat)
 
 
-
+# A small number of probes have sub 0.
 exprsMat[exprsMat <0 ] <- 0
 
 GSE74362_lmFit <- lmFit(exprsMat,
