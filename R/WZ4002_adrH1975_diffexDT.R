@@ -8,7 +8,7 @@
 #' 
 #' @docType data
 #' @usage data(WZ4002_adrH1975_diffexDT)
-#' @example 
+#' @examples
 #' library(ggplot2)
 #' data(WZ4002_adrH1975_diffexDT)
 #' 
