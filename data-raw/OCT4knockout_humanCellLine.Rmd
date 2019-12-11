@@ -282,3 +282,80 @@ regCirc_pvalues[p.adjust(betaUniformMixtureP) < 0.05] # No significant gene sets
 regCirc_pvalues[p.adjust(fishersP) < 0.05] # Quite a few ... too many for so little signal?
 
 TTRUST_TF_pvalues[scoreSum > 0]
+```
+
+
+
+```{r}
+
+library(fgsea)
+
+hallmark_pathways <- gmtPathways("/mnt/c/broad_genesets/h.all.v7.0.entrez.gmt")
+hallmark_pathways_DT <- map2_dfr(hallmark_pathways, names(hallmark_pathways), ~ data.table(name = .y, geneID = .x))
+
+
+cannonical_pathways <- gmtPathways("/mnt/c/broad_genesets/c2.cp.v7.0.entrez.gmt")
+cannonical_pathways_DT <- map2_dfr(cannonical_pathways, names(cannonical_pathways), ~ data.table(name = .y, geneID = .x))
+
+
+
+chemical_genetic_peturbations <- gmtPathways("/mnt/c/broad_genesets/c2.cgp.v7.0.entrez.gmt")
+CGP_geneSets_DT <- map2_dfr(chemical_genetic_peturbations, names(chemical_genetic_peturbations), ~ data.table(name = .y, geneID = .x))
+
+
+cas9OCT4_geneIDexpress <- cas9OCT4_hsZygote_diffex_DT[!is.na(geneID), .SD[koOCT4_pValue == min(koOCT4_pValue, na.rm = T)][1] , by = geneID]
+
+cas9OCT4_geneIDexpress[,qplot(koOCT4_pValue, bins = 120)]
+
+OCT4knockout_betaUniformModel <- fitBetaUniformMixtureDistribution(cas9OCT4_geneIDexpress$koOCT4_pValue, nStarts = 20)
+
+cas9OCT4_geneIDexpress[, betaUnifScore_FDR0.05 := betaUniformScore(koOCT4_pValue, OCT4knockout_betaUniformModel, FDR = 0.05)]
+
+
+
+####
+
+
+braodHallmarkSetsDT <- cas9OCT4_geneSymExpress[ unique(hallmark_pathways_DT[, .(pathway = name, geneID)]), , on = "geneID"][!is.na(koOCT4_pValue),.(pValueSet = list(koOCT4_pValue), geneSet = list(geneSymbol), scoreSum = sum(betaUnifScore_FDR0.05)), by = pathway]
+
+
+braodHallmarkSetsDT[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], ATF3knockout_betaUniformModel), by = pathway]
+braodHallmarkSetsDT[, fishersP := fishersPvalueSumTest(pValueSet[[1]]), by = pathway]
+
+braodHallmarkSetsDT[p.adjust(betaUniformMixtureP, "fdr") < 0.05] 
+braodHallmarkSetsDT[p.adjust(fishersP, "fdr") < 0.05]
+
+braodHallmarkSetsDT[scoreSum > 0]
+
+
+####
+
+braodGCPsetsDT <- cas9OCT4_geneSymExpress[ unique(CGP_geneSets_DT[, .(pathway = name, geneID)]), , on = "geneID"][!is.na(koOCT4_pValue),.(pValueSet = list(koOCT4_pValue), geneSet = list(geneSymbol), scoreSum = sum(betaUnifScore_FDR0.05)), by = pathway]
+
+braodGCPsetsDT[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], ATF3knockout_betaUniformModel), by = pathway]
+braodGCPsetsDT[, fishersP := fishersPvalueSumTest(pValueSet[[1]]), by = pathway]
+
+braodGCPsetsDT[p.adjust(betaUniformMixtureP) < 0.01] 
+braodGCPsetsDT[p.adjust(fishersP) < 0.05]
+
+braodGCPsetsDT[scoreSum > 0]
+
+
+####
+
+braodCanonocalSetsDT <- cas9OCT4_geneSymExpress[ unique(cannonical_pathways_DT[, .(pathway = name, geneID)]), , on = "geneID"][!is.na(koOCT4_pValue),.(pValueSet = list(koOCT4_pValue), geneSet = list(geneSymbol), scoreSum = sum(betaUnifScore_FDR0.05)), by = pathway]
+
+braodCanonocalSetsDT[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], ATF3knockout_betaUniformModel), by = pathway]
+braodCanonocalSetsDT[, fishersP := fishersPvalueSumTest(pValueSet[[1]]), by = pathway]
+
+braodCanonocalSetsDT[p.adjust(betaUniformMixtureP) < 0.01] 
+braodCanonocalSetsDT[p.adjust(fishersP) < 0.01]
+
+braodGCPsetsDT[scoreSum > 0]
+
+```
+
+
+
+
+
