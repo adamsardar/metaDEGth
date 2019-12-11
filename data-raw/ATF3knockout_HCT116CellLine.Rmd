@@ -13,13 +13,11 @@ GSE74363: 	The Common Stress Responsive Transcription Factor ATF3 Binds Active E
 
 The raw data turned out to be two probe annotaiton files - no sign of expression. Sigh. I hate bioinformatics.
 
-Given that the end dataset had no signal and that I can't get ahold of the original data, I shan't include this in the package.
+There is very little signal in this dataset. It will be a hard dataset to extract any signal from.
 
 # Import data
 
 Download the unnormalised zipped expression data directly from GEO, then annotate the columns and background normalise using limma::neqc. I tried downloaded the processed files and the P-value distribution was very odd - I suspect and artifact. Also, the raw files 
-
-
 
 ```{r Read in data directly from GEO}
 
@@ -94,7 +92,6 @@ We shall make use of the  `neqc` function in the `limma` package, which is desig
 
 library(limma)
 
-
 GSE74362measureColumns <- colnames(GSE74362_unnormalised_RAW_DT)[colnames(GSE74362_unnormalised_RAW_DT) %like% "HCT116"]
 
 exprsMat <- GSE74362_unnormalised_RAW_DT[, 
@@ -110,8 +107,6 @@ GSE74362_expObj <- neqc(x = exprsMat,
 ```
 
 
-
-
 ```{r Produce contrast and design matricies}
 
 GSE74362_designMat <- model.matrix(sampleNames ~ 0 + treatment,
@@ -125,11 +120,7 @@ GSE74362_ATF3contrastMat <- makeContrasts(
               contrasts = "E11_DMSO-WT_DMSO",
               levels = GSE74362_designMat)
 
-
-# A small number of probes have sub 0.
-exprsMat[exprsMat <0 ] <- 0
-
-GSE74362_lmFit <- lmFit(exprsMat,
+GSE74362_lmFit <- lmFit(GSE74362_expObj,
                         design = GSE74362_designMat) %>%
                   contrasts.fit(contrasts = GSE74362_ATF3contrastMat) %>%
                   eBayes
@@ -145,28 +136,91 @@ setkey(GSE74362_diffexDT, "HumanHT12v4probeID")
 GSE74362_diffexDT[GPL10558_annot_DT, geneID := i.Entrez_Gene_ID]
 GSE74362_diffexDT[GPL10558_annot_DT, geneSymbol := i.Symbol]
 
-GSE74362_diffexDT[, qplot(P.Value)]
-
-ggplot(GSE74362_diffexDT, aes(x = P.Value)) + 
-    geom_histogram(aes(y=..density..),colour="black",fill="azure3",binwidth = 0.025, center = 0.0125) +
-    labs(title  = "P-value distribution",
-         x = "P-Value",
-         y = "Density") +
-    theme_bw() + 
-    scale_x_continuous(limits = c(0,1), breaks = seq(0,1,0.1)) 
+GSE74362_diffexDT[, qplot(P.Value, bins = 100)]
 ```
 
 So there is almost no signal in this dataset!! Any method should be robust to this kind of sample.  70+% of calls made at FDR of 0.05 are false positives!! It might serve as good decoy dataset actually.
 
 ```{r}
 
-rAAVATF3_diffexDT <- GSE74362_diffexDT[,.(HumanHT12v4probeID, geneID, geneSymbol, koATF3_logFC = logFC, koATF3_pValue = P.Value)]
+koATF3_HCT116_diffexDT <- GSE74362_diffexDT[,.(HumanHT12v4probeID, geneID, geneSymbol, koATF3_logFC = logFC, koATF3_pValue = P.Value)]
 
-setorder(rAAVATF3_diffexDT, koATF3_pValue)
+setorder(koATF3_HCT116_diffexDT, koATF3_pValue)
 
-save(rAAVATF3_diffexDT, file = "./data/rAAVATF3_diffexDT.RData", compress = "xz")
+save(koATF3_HCT116_diffexDT, file = "./data/koATF3_HCT116_diffexDT.RData", compress = "xz")
 ```
 
+
+### Play about with some TF-target database sources ...
+
+```{r}
+
+FANTOM5_hs_regcirc <- fread("zcat /mnt/c/regulatory_circutis/Network_compendium/Tissue-specific_regulatory_networks_FANTOM5-v1/32_high-level_networks/20_gastrointestinal_system.txt.gz") # Arbitrary cut off
+
+FANTOM5_hs_regcirc[V3 > 0.2, qplot(V3)] + scale_x_continuous(breaks = seq(0,1,0.1))
+```
+
+
+
+```{r}
+
+
+koATF3_geneIDExpress <- koATF3_diffexDT[!is.na(geneSymbol), .SD[koATF3_pValue == min(koATF3_pValue, na.rm = T)][1] , by = geneID]
+
+koATF3_geneIDExpress[,qplot(koATF3_pValue, bins = 100)]
+
+ATF3knockout_betaUniformModel <- fitBetaUniformMixtureDistribution(koATF3_geneIDExpress$koATF3_pValue, nStarts = 20)
+# LLH fluctates a bit as we are on the bounds of parameter space!
+
+ATF3knockout_betaUniformModel
+
+noiseFractionUpperBound(ATF3knockout_betaUniformModel)
+
+# If we were to use a P-value cutoff of 0.01, what would the FP rate be?
+TP <- truePositiveFraction(ATF3knockout_betaUniformModel, pValueThreshold = 0.01)
+FP <- falsePositiveFraction(ATF3knockout_betaUniformModel, pValueThreshold = 0.01)
+round(100*FP/(TP+FP), digits = 1) # Over 30% would be false positives!
+# Perform meta-analysis using the TTRUST TF->target sets
+
+koATF3_geneIDExpress[, betaUnifScore_FDR0.05 := betaUniformScore(koATF3_pValue, ATF3knockout_betaUniformModel, FDR = 0.05)]
+
+
+
+TTRUST_TF_pvalues <- koATF3_geneIDExpress[ unique(TTRUST_TF2targets_DT[!is.na(geneID), .(TF,geneID)]), , on = "geneID"][!is.na(koATF3_pValue),.(pValueSet = list(koATF3_pValue), geneSet = list(geneSymbol), scoreSum = sum(betaUnifScore_FDR0.05)), by = TF]
+
+TTRUST_TF_pvalues[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], ATF3knockout_betaUniformModel), by = TF]
+TTRUST_TF_pvalues[, fishersP := fishersPvalueSumTest(pValueSet[[1]]), by = TF]
+
+TTRUST_TF_pvalues[p.adjust(betaUniformMixtureP) < 0.05] # No significant gene sets
+TTRUST_TF_pvalues[p.adjust(fishersP) < 0.05] # Quite a few ... too many for so little signal?
+
+TTRUST_TF_pvalues[scoreSum > 0]
+
+# I'm not convince that there is any signal in this dataset ...
+
+TTRUST_TF_pvalues %>%
+ggplot(aes(x = -log(betaUniformMixtureP), y = -log(fishersP))) +
+geom_point() +
+labs(title = "Plot to show how much more conservative beta-uniform P-Values are than Fisher's combined P-values",
+subtitle = "ATF3 knockout study (which has very little signal).\nBonferroni (conservative) multiple hypothesuis correction cut-off shown.") +
+geom_vline(xintercept = -log(0.05/800), linetype = "dashed", colour = "red") +
+geom_hline(yintercept = -log(0.05/800), linetype = "dashed", colour = "red")
+TTRUST_TF_pvalues <- koATF3_diffexDT[TTRUST_TF2targets_DT[!is.na(geneID), .(TF, geneID)], , on = "geneID"][,.(pValueSet = list(P.Value), geneSet = list(geneSymbol)), by = TF]
+# Perform meta-analysis using the TTRUST TF->target sets
+TTRUST_TF_pvalues <- koATF3_diffexDT[TTRUST_TF2targets_DT[!is.na(geneID), .(TF, geneID)], , on = "geneID"][,.(pValueSet = list(P.Value), geneSet = list(geneSymbol)), by = TF]
+TTRUST_TF_pvalues[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], ATF3knockout_betaUniformModel), by = TF]
+TTRUST_TF_pvalues[, fishersP := fishersPvalueSumTest(pValueSet[[1]]), by = TF]
+TTRUST_TF_pvalues[p.adjust(betaUniformMixtureP) < 0.05] # No significant gene sets
+TTRUST_TF_pvalues[p.adjust(fishersP) < 0.05] # Quite a few ... too many for so little signal?
+TTRUST_TF_pvalues %>%
+ggplot(aes(x = -log(betaUniformMixtureP), y = -log(fishersP))) +
+geom_point() +
+labs(title = "Plot to show how much more conservative beta-uniform P-Values are than Fisher's combined P-values",
+subtitle = "ATF3 knockout study (which has very little signal).\nBonferroni (conservative) multiple hypothesuis correction cut-off shown.") +
+geom_vline(xintercept = -log(0.05/800), linetype = "dashed", colour = "red") +
+geom_hline(yintercept = -log(0.05/800), linetype = "dashed", colour = "red")
+
+```
 
 
 ```{r}
