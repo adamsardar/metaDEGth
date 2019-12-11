@@ -1,17 +1,24 @@
-#' Microarray assay to understand acquired resistance to EGFR-targeted therapy (erlotinib) in cell lines
+#' Microarray assay studying aberrant MAPK1/ERK signaling, causing resistance to EGFR kinase inhibitors
 #' 
-#' GSE38310: HCC827 cell lines, which are susceptible to erlotinib, were treated to induce resistence in vivo by repeated exposure. Gene expression of cell lines
-#' treated with erlotibin was collected (alongside controls) in both susceptible and resistant cell lines. Expression captured using Illumina HumanHT-12 V3.0 expression beadchip.
-#' 
-#' The study authors cocluded that AXL kinase caused resistance to EGFR therapy. A clean peturbagenic experiment.
+#' GSE37699: WZ4002 is a second generation TKI, effective at treating cells with the most common T790M mutation of aquired drug resistance. This study
+#' inspects cell lines which have evolved resitance to WZ4002 by repeated exposure, concluding that it is a result of upregulated MAPK1 and/or ERK pathway
+#' activity. Expression captured using Illumina HumanHT-12 V3.0 expression beadchip.
 #' 
 #' Generated 10 December 2019 from raw expression values dowloaded from GEO. Values were normalised using limma::neqc and processed with further limma functions.
 #' 
 #' @docType data
-#' @usage data(erlotinib_ADRcellLines)
+#' @usage data(WZ4002_adrH1975_diffexDT)
+#' @example 
+#' library(ggplot2)
+#' data(WZ4002_adrH1975_diffexDT)
 #' 
+#' WZ4002_adrH1975_diffexDT %>%
+#' ggplot(aes(x = H1975_logFC, y = -log10(H1975_pValue))) +
+#'     geom_point(aes(colour = p.adjust(H1975_pValue) < 0.01 )) +
+#'     scale_colour_manual(values = c("darkgrey","dodgerblue")) +
+#'     theme_bw() 
 #' @source \url{https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE38310}
 #' @references \url{https://en.wikipedia.org/wiki/Erlotinib}
 #' @references Zhang Z, Lee JC, Lin L, Olivas V et al. Activation of the AXL kinase causes resistance to EGFR-targeted therapy in lung cancer. Nat Genet 2012
-#' @format A data.table with 48,803 rows, documenting probe-level differential expression three erlotinib cell line assays: against HCC827 (susceptible) and against ER3/T15.2 (evolved resistance). Addition gene symbols, entrez gene IDs and uniprot annotations also included.
-"erlotinib_ADRcellLines"
+#' @format A data.table with 22,277 rows, documenting probe-level differential expression between unchallenged and immune (evolved resistance) NCI-H1975 cell lines. Addition gene symbols and entrez gene IDs are also included.
+"WZ4002_adrH1975_diffexDT"

@@ -60,7 +60,7 @@ colnames(GSE37699_exprs) <- GSE37699_metadata[colnames(GSE37699_exprs), study_na
 
 Build a design and contrast matrix
 
-```{r Produce contrast and design matricies}
+```{r Produce contrast and design matrices}
 
 GSE37699_designMat <- model.matrix(study_name ~ 0 + treatment,
                                    GSE37699_metadata[filename %like% "CEL"])
@@ -69,7 +69,7 @@ colnames(GSE37699_designMat) %<>% str_remove("treatment") %>% str_remove("NCI-")
 row.names(GSE37699_designMat) <- GSE37699_metadata[filename %like% "CEL", study_name]
 
 GSE37699_contrastMat <- makeContrasts(
-              contrasts = c("H1975_parental-H1975_WZR6"),
+              contrasts = c("H1975_WZR6-H1975_parental"), #challenge - control
               levels = GSE37699_designMat)
 
 ```
@@ -78,6 +78,7 @@ GSE37699_contrastMat <- makeContrasts(
 ```{r RMA}
 library(limma)
 
+
 GSE37699_lmFit <- lmFit(GSE37699_exprs,
                         design = GSE37699_designMat) %>%
                   contrasts.fit(contrasts = GSE37699_contrastMat) %>%
@@ -85,7 +86,7 @@ GSE37699_lmFit <- lmFit(GSE37699_exprs,
 
 
 WZ4002_adrH1975_diffexDT <- data.table(topTable(GSE37699_lmFit, number = Inf, adjust.method = "fdr",
-                                                coef = "H1975_parental-H1975_WZR6"), keep.rownames = TRUE )
+                                                coef = "H1975_WZR6-H1975_parental"), keep.rownames = TRUE )
 
 WZ4002_adrH1975_diffexDT %<>% 
   merge(GPL571_table[,.(ID, geneSymbol = `Gene Symbol`, geneID = ENTREZ_GENE_ID)], by.x = "rn", by.y = "ID")
