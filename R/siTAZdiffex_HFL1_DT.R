@@ -10,8 +10,7 @@
 #' @docType data
 #' @usage data(siTAZdiffex_HFL1_DT)
 #' 
-#' @example
-#' 
+#' @examples 
 #' library(ggplot2)
 #' data(siTAZdiffex_HFL1_DT)
 #' 
