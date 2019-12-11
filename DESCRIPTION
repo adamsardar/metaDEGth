@@ -35,6 +35,7 @@ Collate:
     'erlotinib_ADRcellLines.R'
     'fishersPvalueSumTest.R'
     'fitBetaUniformModel.R'
+    'koATF3_HCT116_diffexDT.R'
     'metaDEGth-package.R'
     'siTAZdiffex_HFL1_DT.R'
     'validators.R'
