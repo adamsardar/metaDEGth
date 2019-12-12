@@ -22,17 +22,19 @@
 setGeneric("fishersPvalueSumTest",
            signature = c("testPvalues"),
            valueClass = "Pvalue",
-           function(testPvalues, ...) standardGeneric("fishersPvalueSumTest"))
+           function(testPvalues, na.rm = TRUE, ...) standardGeneric("fishersPvalueSumTest"))
 
 #' @describeIn fishersPvalueSumTest Convert to P-values on the fly
 setMethod("fishersPvalueSumTest",
           signature = c( testPvalues = "numeric"),
-          function(testPvalues) callGeneric( new("Pvalues", testPvalues)) )
+          function(testPvalues, na.rm = TRUE, ...) callGeneric( new("Pvalues", testPvalues), na.rm) )
 
 #' @describeIn fishersPvalueSumTest Fisher's combined probability test
 setMethod("fishersPvalueSumTest",
           signature = c(testPvalues = "Pvalues"),
-          function(testPvalues){
+          function(testPvalues, na.rm = TRUE, ...){
+            
+            if(na.rm){testPvalues <- na.omit(testPvalues)}
             
             testStatistic <- sum(-log(testPvalues))
             nValues <- length(testPvalues)

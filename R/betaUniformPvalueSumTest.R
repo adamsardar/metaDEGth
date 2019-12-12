@@ -22,17 +22,19 @@
 setGeneric("betaUniformPvalueSumTest",
            signature = c("testPvalues", "betaUniformFit"),
            valueClass = "Pvalue",
-           function(testPvalues, betaUniformFit, ...) standardGeneric("betaUniformPvalueSumTest"))
+           function(testPvalues, betaUniformFit, na.rm = TRUE) standardGeneric("betaUniformPvalueSumTest"))
 
 #' @describeIn betaUniformPvalueSumTest Convert to P-values on the fly
 setMethod("betaUniformPvalueSumTest",
           signature = c(testPvalues = "numeric", betaUniformFit = "BetaUniformModel"),
-          function(testPvalues, betaUniformFit) callGeneric(new("Pvalues", testPvalues), betaUniformFit))
+          function(testPvalues, betaUniformFit, na.rm = TRUE) callGeneric(new("Pvalues", testPvalues), betaUniformFit, na.rm))
 
 #' @describeIn betaUniformPvalueSumTest Compute a P-value with the null-hypothesis being that they are drawn randomly from a mixture distribution
 setMethod("betaUniformPvalueSumTest",
           signature = c(testPvalues = "Pvalues", betaUniformFit = "BetaUniformModel"),
-          function(testPvalues, betaUniformFit) {
+          function(testPvalues, betaUniformFit, na.rm = TRUE) {
+            
+            if(na.rm){testPvalues <- na.omit(testPvalues)}
             
             nValues <- length(testPvalues)
             
