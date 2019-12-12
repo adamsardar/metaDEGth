@@ -159,9 +159,10 @@ cgpSetsDT[, fishersP := fishersPvalueSumTest(pValueSet[[1]]), by = pathway]
 cgpSetsDT[p.adjust(betaUniformMixtureP, "fdr") < 0.05] 
 cgpSetsDT[p.adjust(fishersP, "fdr") < 0.05]
 
-braodHallmarkSetsDT[scoreSum > 0]
+cgpSetsDT[scoreSum > 0]
 
 
 
 ```
+
 
