@@ -105,9 +105,9 @@ row.names(GSE38310_designMat) <- GSE38310_sampleAnnot[type == "measure", colName
 
 
 GSE38310_contrastMat <- makeContrasts(
-              contrasts = c("HCC827_DMSO_12h-HCC827_erlotinib_12h",
-                            "ER3_DMSO_12h-ER3_erlotinib_12h",
-                            "T15.2_DMSO_12h-T15.2_erlotinib_12h"),
+              contrasts = c("HCC827_erlotinib_12h-HCC827_DMSO_12h",
+                            "ER3_erlotinib_12h-ER3_DMSO_12h",
+                            "T15.2_erlotinib_12h-T15.2_DMSO_12h"),
               levels = GSE38310_designMat)
 ```
 
@@ -119,21 +119,21 @@ GSE38310_lmFit <- lmFit(GSE38310_expObj,
 
 
 erlotinibHCC827_diffexDT <- data.table(topTable(GSE38310_lmFit, number = Inf, adjust.method = "fdr",
-                                                coef = "HCC827_DMSO_12h-HCC827_erlotinib_12h"), keep.rownames = TRUE )
+                                                coef = "HCC827_erlotinib_12h-HCC827_DMSO_12h"), keep.rownames = TRUE )
 
 setnames(erlotinibHCC827_diffexDT, 
          c("rn","logFC","P.Value"),
          c("HumanHT12v3probeID","HCC827_logFC","HCC827_pValue"))
 
 erlotinibER3_diffexDT <- data.table(topTable(GSE38310_lmFit, number = Inf, adjust.method = "fdr",
-                                             coef = "ER3_DMSO_12h-ER3_erlotinib_12h"), keep.rownames = TRUE )
+                                             coef = "ER3_erlotinib_12h-ER3_DMSO_12h"), keep.rownames = TRUE )
 
 setnames(erlotinibER3_diffexDT, 
          c("rn","logFC","P.Value"),
          c("HumanHT12v3probeID","ER3_logFC","ER3_pValue"))
 
 erlotinibT15.2_diffexDT <- data.table(topTable(GSE38310_lmFit, number = Inf, adjust.method = "fdr",
-                                               coef = "T15.2_DMSO_12h-T15.2_erlotinib_12h"), keep.rownames = TRUE )
+                                               coef = "T15.2_erlotinib_12h-T15.2_DMSO_12h"), keep.rownames = TRUE )
 
 setnames(erlotinibT15.2_diffexDT, 
          c("rn","logFC","P.Value"),
@@ -153,7 +153,6 @@ erlotinib_adrHCC827_diffexDT <-
 ```{r Save as package datafile}
 
 erlotinib_adrHCC827_diffexDT
-
 
 setorder(erlotinib_adrHCC827_diffexDT, HCC827_pValue)
 
