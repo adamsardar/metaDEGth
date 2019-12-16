@@ -1,0 +1,157 @@
+---
+title: ""
+output: html_notebook
+editor_options: 
+  chunk_output_type: console
+---
+
+WORK HERE - we should be able to self sample
+
+
+```{r}
+
+
+erlotinib_adrHCC827_diffexDT
+
+susceptibleCellLine_BetaUniformModel <- fitBetaUniformMixtureDistribution(erlotinib_adrHCC827_diffexDT$HCC827_pValue, 
+                                                                          nStarts = 20)
+fittedBetaShape <- susceptibleCellLine_BetaUniformModel@a
+uniformProportion <- susceptibleCellLine_BetaUniformModel@lambda
+
+fitBetaUniformMixtureDistribution(rbetaUniformFunc(100000,fittedBetaShape,nonUniformProportion))
+
+plot.BetaUniformModel(susceptibleCellLine_BetaUniformModel, outputParameters = F, outputFormula = F)
+
+qplot(rbetaUniformFunc(10000, a = susceptibleCellLine_BetaUniformModel@a, lambda = susceptibleCellLine_BetaUniformModel@lambda))
+
+library(gendist)
+
+pmixt(2, 1,spec1 = "unif", arg1 = NULL, spec2 = "beta", arg2 = c(shape1 = 0.1739698, shape2 = 1), lower.tail = FALSE )
+
+
+nullModelTests <- list()
+
+for(i in 1:1000){
+  
+  randomSetSize <- rpois(1,10)
+  
+  random_draws <- map(1:1000, ~{rbetaUniformFunc(randomSetSize,fittedBetaShape,uniformProportion)})
+  # random_draws <- map(1:1000, ~{runif(n = randomSetSize)}); uniformProportion <- 1
+  #random_draws <- map(1:1000, ~{rbeta(n = randomSetSize, shape1 = fittedBetaShape, shape2 = 1)}) ; uniformProportion <- 0
+  
+  
+  (uniformProportion/nonUniformProportion) * fittedBetaShape * random_draws[33][[1]]^(fittedBetaShape-1)
+  
+  testStats <- map_dbl(random_draws, ~ sum(-log(.x)))
+  
+  empiricalGTE <- length(which(testStats[1] <= testStats[-1]))/length(testStats[-1])
+  
+  fisherPval <- pgamma(testStats[1], shape = randomSetSize, scale = 1, lower.tail = FALSE) 
+  
+  nonUniformProportion <- (1-uniformProportion)
+  scaleParam <- 1/fittedBetaShape
+  
+  mu <- randomSetSize*(uniformProportion + nonUniformProportion*scaleParam )
+  sigmaSq <- randomSetSize*(uniformProportion^2 + (nonUniformProportion^2)*(scaleParam^2) ) 
+
+  combinedPval <- pgamma(testStats[1], shape = (mu^2)/sigmaSq, scale = sigmaSq/mu, lower.tail = F)
+ 
+  combinedPval
+  empiricalGTE
+  fisherPval
+  
+  
+  # P ~ (1-\lambda)\beta(a,1) + \lambda\beta(1,1)
+  # combinedPval <- uniformProportion * pgamma(testStats[1], shape = randomSetSize, rate = 1, lower.tail = F) +
+  #   (1-uniformProportion) * pgamma(testStats[1], shape = randomSetSize, rate = fittedBetaShape, lower.tail = F)
+  
+  nullModelTests %<>% c(list(data.table(empiricalGTE, fisherPval, combinedPval, size = randomSetSize)))
+}
+
+empiricalVsPred <- rbindlist(nullModelTests)
+empiricalVsPred[, diffBeta := (empiricalGTE - combinedPval)]
+
+empiricalVsPred[,qplot(x = size, y = (empiricalGTE - combinedPval))]
+
+empiricalVsPred[,qplot(x = size, y = (empiricalGTE - fisherPval))]
+
+empiricalVsPred %>%
+  ggplot(aes(x = empiricalGTE)) +
+  geom_point(aes(y = fisherPval), colour = "blue") +
+  geom_point(aes(y = combinedPval), colour = "red") +
+  geom_abline() +
+  theme_bw()
+
+```
+
+
+
+```{r}
+
+randDraws <- rbetaUniformFunc(10000,fittedBetaShape,uniformProportion)
+
+ qplot( randDraws * (1-uniformProportion)/uniformProportion)
+
+ sort(-randDraws^(fittedBetaShape-1))
+ 
+
+transformed <- (fittedBetaShape-1) * (  (randDraws - uniformProportion)/(fittedBetaShape*nonUniformProportion) )
+
+qplot(x = dom, y = 0.5 + 0.5*tanh(dom/2)  )
+
+
+
+```
+
+
+
+
+
+
+
+test against uniform random draws
+
+```{r}
+
+
+
+# P ~ (1-\lambda)\beta(a,1) + \lambda\beta(1,1)
+pureNoiseBetaUniformModel <- fitBetaUniformMixtureDistribution(runif(10000), nStarts = 20)
+fittedBetaShape <- pureNoiseBetaUniformModel@a
+nonUniformProportion <- pureNoiseBetaUniformModel@lambda
+
+
+
+
+
+nullModelTests <- list()
+
+for(i in 1:1000){
+  
+  randomSetSize <- rpois(1,10)
+  
+  random_draws <- map(1:1000, ~{runif(n = randomSetSize)})
+  
+  testStats <- map_dbl(random_draws, ~ -sum(log(.x)))
+  
+  empiricalGTE <- length(which(testStats[1] <= testStats[-1]))/length(testStats[-1])
+  
+  fisherPval <- pgamma(testStats[1], shape = randomSetSize, rate = 1, lower.tail = FALSE) 
+  
+  # P ~ (1-\lambda)\beta(a,1) + \lambda\beta(1,1)
+  combinedPval <- nonUniformProportion * qgamma(testStats[1], shape = randomSetSize, rate = 1, lower.tail = FALSE) +
+    (1-nonUniformProportion) * qgamma(testStats[1], shape = randomSetSize, rate = fittedBetaShape, lower.tail = FALSE)
+  
+  
+  nullModelTests %<>% c(list(data.table(empiricalGTE, fisherPval, combinedPval, size = randomSetSize)))
+}
+
+
+rbindlist(nullModelTests) %>%
+  ggplot(aes(x = empiricalGTE)) +
+  geom_point(aes(y = fisherPval), colour = "blue") +
+  geom_point(aes(y = combinedPval), colour = "red") +
+  geom_abline() +
+  theme_bw()
+
+```
