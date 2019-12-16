@@ -124,6 +124,25 @@ qbetaUniformFunc <- function(p, a, lambda){
   return((1-lambda)*qbeta(p,a,1) + lambda*p )
 }
 
+
+#' Random draw function for Beta-uniform model
+#' @references Pounds, S., & Morris, S. W. (2003). Estimating the occurrence of false positives and false negatives in microarray studies by approximating and partitioning the empirical distribution of p-values. Bioinformatics
+#' @importFrom stats qbeta
+rbetaUniformFunc <- function(n, a, lambda){
+  
+  # A simple translation of the beta-uniform mixture distribution 
+  # (1-lambda)*qbeta(p,a,1) + lambda*qbeta(p,1,1) 
+  betaUniformDraws <- numeric(n)
+  
+  #Bernoulli draws
+  signalComponent <- runif(n) < lambda
+  
+  betaUniformDraws[which(signalComponent)] <- runif(n = length(which(signalComponent)))
+  betaUniformDraws[which(!signalComponent)] <- rbeta(n = length(which(!signalComponent)),  shape1 = a, shape2 = 1)
+
+  return(betaUniformDraws)
+}
+
 #' Upper bound on Uniform component of Beta-uniform model
 #' @references Pounds, S., & Morris, S. W. (2003). Estimating the occurrence of false positives and false negatives in microarray studies by approximating and partitioning the empirical distribution of p-values. Bioinformatics
 #' @importFrom stats dunif
