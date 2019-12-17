@@ -207,7 +207,7 @@ plot.BetaUniformModel <- function(x, showFit = TRUE, outputParameters = TRUE, ou
          y = "Observed Quantile") +
     geom_abline(intercept = 0, slope = 1, linetype = "dotted")
   
-  paramSpace <- expand.grid(a = seq(0,3,0.1), lambda = seq(0,1,0.1)) %>% data.table
+  paramSpace <- expand.grid(a = seq(0,1,0.1), lambda = seq(0,1,0.1)) %>% data.table
   
   pVals <- x@pvalues@.Data #slot access is expensive
   paramSpace[, LLH := sum(log( betaUniformDensity(pVals, a, lambda) )), by = .(a, lambda)]

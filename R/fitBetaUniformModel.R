@@ -44,7 +44,7 @@ setMethod("fitBetaUniformMixtureDistribution",
             #Fit beta-uniform distribution from a number of uniform random starting points. We need to wrap the method safely  
             optimiseBetaUniformParams <- possibly(
               ~ fitdistr(x = na.omit(pValues), densfun = betaUniformDensity,
-                         start = list(a = runif(1, min = epsilon, max = 3), 
+                         start = list(a = runif(1, min = epsilon, max = 1), 
                                       lambda = runif(1, min = epsilon, max = 1-epsilon) ),
                          lower = c(epsilon, epsilon),
                          upper = c(3, 1-epsilon),
@@ -71,7 +71,7 @@ setMethod("fitBetaUniformMixtureDistribution",
             
             #Inspect fb for whether any parameters lie on extremas
             if( isTRUE(all.equal(betaUnifMod@a, epsilon, tolerance = epsilon)) |
-                isTRUE(all.equal(betaUnifMod@a, 3, tolerance = epsilon)) |
+                isTRUE(all.equal(betaUnifMod@a, 1, tolerance = epsilon)) |
                 isTRUE(all.equal(betaUnifMod@lambda, epsilon, tolerance = epsilon)) |
                 isTRUE(all.equal(betaUnifMod@lambda, 1-epsilon, tolerance = epsilon)) ){
               
