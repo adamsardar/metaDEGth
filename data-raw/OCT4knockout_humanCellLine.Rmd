@@ -203,10 +203,11 @@ cas9OCT4_hsZygote_diffexDT[ p.adjust(koOCT4_pValue,"fdr") < 1E-3][order(-koOCT4_
 
 ```{r}
 
-OCTcrisprByGeneID <- cas9OCT4_hsZygote_diffex_DT[!is.na(geneID), .(geneID = as.integer(unlist(strsplit(geneID, "; ")))), by = .(ENSG, accession, koOCT4_pValue)]
+OCTcrisprByGeneID <- cas9OCT4_hsZygote_diffexDT[!is.na(geneID), .(geneID = as.integer(unlist(strsplit(geneID, "; ")))), by = .(ENSG, accession, koOCT4_pValue)]
 
 cas9OCT4_BUMod <- fitBetaUniformMixtureDistribution(OCTcrisprByGeneID$koOCT4_pValue)
 
+plot.BetaUniformModel(cas9OCT4_BUMod, outputFormula = F, outputParameters=F)
 
 OCTcrisprByGeneID[, betaUnifScore_FDR0.05 := betaUniformScore(koOCT4_pValue, cas9OCT4_BUMod)]
 
@@ -218,22 +219,22 @@ falsePositiveFraction(cas9OCT4_BUMod, pValueThreshold = 0.05)/(falsePositiveFrac
 noiseFractionUpperBound(cas9OCT4_BUMod)
 
 TF_pvals <- OCTcrisprByGeneID[  unique(TTRUST_TF2targets_DT[!is.na(geneID), .(TF, geneID)]), , on = "geneID"] %>% 
-                    .[!is.na(koOCT4_pValue),.(geneSets = list(koOCT4_pValue), members = list(geneID)), by = TF]
+                    .[!is.na(koOCT4_pValue),.(pValueSet = list(koOCT4_pValue), members = list(geneID), sumScore = sum(betaUnifScore_FDR0.05, na.rm=T)), by = TF]
 
-TF_pvals_list <- TF_pvals[, geneSets]
-names(TF_pvals_list) <- TF_pvals[, TF]
+TF_pvals[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], cas9OCT4_BUMod), by = TF]
+TF_pvals[, fishersP := fishersPvalueSumTest(pValueSet[[1]]), by = TF]
 
-betaUnifPs <- sapply(TF_pvals_list, betaUniformPvalueSumTest, betaUniformFit = cas9OCT4_BUMod)
-fisherPs <- sapply(TF_pvals_list, fishersPvalueSumTest)
+TF_pvals %>%
+  ggplot(aes(x = -log10( as.numeric(fishersP)), y = -log10(as.numeric(betaUniformMixtureP)))) +
+  geom_point()
 
-summaryDT <- data.table(TF = names(betaUnifPs),
-                        metaDEGthP = betaUnifPs,
-                        fiserP = fisherPs)
 
-summaryDT[, metaDEGthQ := p.adjust(metaDEGthP, "fdr")]
-summaryDT[, fisherQ := p.adjust(fiserP, "fdr")]
+TF_pvals[, betaUniformMixtureQ := p.adjust(betaUniformMixtureP, "fdr")]
+TF_pvals[, fishersQ := p.adjust(fishersP, "fdr")]
 
-summaryDT[order(metaDEGthQ)]
+TF_pvals[order(betaUniformMixtureQ)]
+
+TF_pvals[TF == "POU5F1"]
 ```
 
 This is another focused dataset where TTRUST fails to pick out signal (or it's metaDEGth - also possible). I notice that NNANOG, a well known POU5F1 target is in there as diffexed ...
@@ -251,7 +252,7 @@ FANTOM5_hs_regcirc[V3 > 0.2, qplot(V3)] + scale_x_continuous(breaks = seq(0,1,0.
 
 ```{r}
 
-cas9OCT4_geneSymExpress <- cas9OCT4_hsZygote_diffex_DT[!is.na(geneSymbol), .SD[koOCT4_pValue == min(koOCT4_pValue, na.rm = T)][1] , by = geneSymbol]
+cas9OCT4_geneSymExpress <- cas9OCT4_hsZygote_diffexDT[!is.na(geneSymbol), .SD[koOCT4_pValue == min(koOCT4_pValue, na.rm = T)][1] , by = geneSymbol]
 
 cas9OCT4_geneSymExpress[,qplot(koOCT4_pValue, bins = 120)]
 
@@ -275,7 +276,7 @@ cas9OCT4_geneSymExpress[, betaUnifScore_FDR0.05 := betaUniformScore(koOCT4_pValu
 regCirc_pvalues <- cas9OCT4_geneSymExpress[ unique(FANTOM5_hs_regcirc[V2 > 0.3, .(TF = V1, geneSymbol = V2)]), , on = "geneSymbol"][!is.na(koOCT4_pValue),.(pValueSet = list(koOCT4_pValue), geneSet = list(geneSymbol), scoreSum = sum(betaUnifScore_FDR0.05)), by = TF]
 
 
-regCirc_pvalues[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], ATF3knockout_betaUniformModel), by = TF]
+regCirc_pvalues[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], OCT4knockout_betaUniformModel), by = TF]
 regCirc_pvalues[, fishersP := fishersPvalueSumTest(pValueSet[[1]]), by = TF]
 
 regCirc_pvalues[p.adjust(betaUniformMixtureP) < 0.05] # No significant gene sets
@@ -319,10 +320,10 @@ cas9OCT4_geneIDexpress[, betaUnifScore_FDR0.05 := betaUniformScore(koOCT4_pValue
 braodHallmarkSetsDT <- cas9OCT4_geneSymExpress[ unique(hallmark_pathways_DT[, .(pathway = name, geneID)]), , on = "geneID"][!is.na(koOCT4_pValue),.(pValueSet = list(koOCT4_pValue), geneSet = list(geneSymbol), scoreSum = sum(betaUnifScore_FDR0.05)), by = pathway]
 
 
-braodHallmarkSetsDT[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], ATF3knockout_betaUniformModel), by = pathway]
+braodHallmarkSetsDT[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], OCT4knockout_betaUniformModel), by = pathway]
 braodHallmarkSetsDT[, fishersP := fishersPvalueSumTest(pValueSet[[1]]), by = pathway]
 
-braodHallmarkSetsDT[p.adjust(betaUniformMixtureP, "fdr") < 0.05] 
+braodHallmarkSetsDT[p.adjust(betaUniformMixtureP, "fdr") < 0.01] 
 braodHallmarkSetsDT[p.adjust(fishersP, "fdr") < 0.05]
 
 braodHallmarkSetsDT[scoreSum > 0]
@@ -332,11 +333,11 @@ braodHallmarkSetsDT[scoreSum > 0]
 
 braodGCPsetsDT <- cas9OCT4_geneSymExpress[ unique(CGP_geneSets_DT[, .(pathway = name, geneID)]), , on = "geneID"][!is.na(koOCT4_pValue),.(pValueSet = list(koOCT4_pValue), geneSet = list(geneSymbol), scoreSum = sum(betaUnifScore_FDR0.05)), by = pathway]
 
-braodGCPsetsDT[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], ATF3knockout_betaUniformModel), by = pathway]
+braodGCPsetsDT[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], OCT4knockout_betaUniformModel), by = pathway]
 braodGCPsetsDT[, fishersP := fishersPvalueSumTest(pValueSet[[1]]), by = pathway]
 
 braodGCPsetsDT[p.adjust(betaUniformMixtureP) < 0.01] 
-braodGCPsetsDT[p.adjust(fishersP) < 0.05]
+braodGCPsetsDT[p.adjust(fishersP) < 0.01]
 
 braodGCPsetsDT[scoreSum > 0]
 
