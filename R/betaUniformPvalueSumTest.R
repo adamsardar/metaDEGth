@@ -16,6 +16,7 @@
 #' @seealso BioNet::fitBumModel
 #' @family P-value sum tests
 #' @references Luo, W., Friedman, M. S., Shedden, K., Hankenson, K. D., & Woolf, P. J. (2009). GAGE: generally applicable gene set enrichment for pathway analysis. BMC Bioinformatics
+#' @references Stewart T, Strijbosch LWG, Moors H, van Batenburg P. A Simple Approximation to the Convolution of Gamma Distributions. 2007
 #' @importFrom stats pgamma
 #' @include Pvalues_S4Class.R
 #' @export
@@ -39,12 +40,15 @@ setMethod("betaUniformPvalueSumTest",
             nValues <- length(testPvalues)
             
             fittedBetaShape <- betaUniformFit@a
-            nonUniformProportion <- betaUniformFit@lambda
+            uniformProportion <- betaUniformFit@lambda
             
             testStatistic <- sum(-log(testPvalues))
             
-            combinedPval <- nonUniformProportion * pgamma(testStatistic, shape = nValues, rate = 1, lower.tail = FALSE) +
-                        (1-nonUniformProportion) * pgamma(testStatistic, shape = nValues, rate = fittedBetaShape, lower.tail = FALSE)
+            mu <- randomSetSize*(uniformProportion +  (1-uniformProportion)*scaleParam)
+            sigmaSq <-  randomSetSize*(uniformProportion +  (1-uniformProportion)*scaleParam^2)
+            
+            # Convolution of two gamma functions, taken from Stewart et al.
+            combinedPval <- pgamma(testStatistic, shape = (mu^2)/sigmaSq, scale = sigmaSq/mu, lower.tail = F)
             
             return( new("Pvalue", mkScalar(combinedPval)) )
           })
