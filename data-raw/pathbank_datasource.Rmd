@@ -1,0 +1,84 @@
+---
+title: "PathBank data exploration"
+author: "Adam Sardar"
+date: "12/12/2019"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+Pathbank is a new (Oct 2019) resource from the people that made SMPD (The Small Molecule Pathway Database).
+
+```{r}
+
+library(data.table)
+
+all_pathbank_DT <- fread("/mnt/c/pathbank/pathbank_all_proteins.csv")
+
+setnames(all_pathbank_DT,
+  c("PathBank ID", "Pathway Name", "Pathway Subject", "Species", "Uniprot ID", "Protein Name", "HMDBP ID", "DrugBank ID", "GenBank ID", "Gene Name", "Locus"),
+  c("pathbank", "pathway", "pathwayType", "species", "accession", "title", "HMDBP", "drugbank", "genbank", "geneSymbol", "locus"))
+
+
+hsPathBankProteinSets_DT <- all_pathbank_DT[species == "Homo sapiens" & accession != "Unknown", .(pathbank, pathway, pathwayType, accession, geneSymbol)] %>% unique
+```
+
+Include additional identifiers via accession
+
+```{r}
+
+uniprot_hs_IDmap <- fread("zcat /mnt/c/Uniprot/HUMAN_9606_idmapping_selected.tab.gz")
+
+hsPathBankProteinSets_DT[uniprot_hs_IDmap[,c(1,2,3,19)], geneID := V3, on = .(accession == V1)]
+hsPathBankProteinSets_DT[uniprot_hs_IDmap[,c(1,2,3,19)], ENSG := V19, on = .(accession == V1)]
+```
+
+Save as a package dataset
+
+
+```{r}
+save(hsPathBankProteinSets_DT, file = ".data/hsPathBankSets_DT.RData", compress = "xz")
+```
+
+
+Let's try it on erlotinib
+
+```{r}
+
+erlotinib_aggregatedExpress <- erlotinib_adrHCC827_diffexDT[,.SD[ER3_pValue == min(ER3_pValue)][1], by = geneID]
+
+susceptibleCellLine_BetaUniformModel <- fitBetaUniformMixtureDistribution(erlotinib_aggregatedExpress$ER3_pValue)
+
+noiseFractionUpperBound(susceptibleCellLine_BetaUniformModel)
+
+plot(susceptibleCellLine_BetaUniformModel, outputFormula = FALSE, outputParameters = FALSE)
+
+erlotinib_aggregatedExpress[, betaUnifScore_FDR0.05 := betaUniformScore(ER3_pValue, susceptibleCellLine_BetaUniformModel, FDR = 0.05)]
+
+
+
+#Group by GeneIDs
+hsPathBankGeneIDsets_DT <- hsPathBankProteinSets_DT[!is.na(geneID) & pathwayType != "Metabolic", .(geneID = as.integer(unique(unlist( strsplit(geneID, "; "))))), by = .(pathway,pathwayType)]
+
+pathwayPvals <- erlotinib_aggregatedExpress %>% 
+  .[hsPathBankGeneIDsets_DT,,on = "geneID", allow.cartesian=TRUE] %>%
+  .[!is.na(ER3_pValue),
+    .(pValueSet = list(ER3_pValue), members = list(geneSymbol), scoreSum = sum(betaUnifScore_FDR0.05, na.rm = T)), by = .(pathway,pathwayType)]
+
+pathwayPvals[, geneSet := str_c(sort(members[[1]]), collapse = ","), by = pathway]
+
+pathwayPvals[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], susceptibleCellLine_BetaUniformModel),  by = geneSet]
+pathwayPvals[, fishersP := fishersPvalueSumTest(pValueSet[[1]]),  by = geneSet]
+
+pathwayPvals[!duplicated(geneSet), betaUniformMixtureQ := p.adjust(betaUniformMixtureP, "fdr")]
+pathwayPvals[,betaUniformMixtureQ := na.omit(betaUniformMixtureQ) , by = geneSet]
+
+pathwayPvals[!duplicated(geneSet), fishersQ := p.adjust(fishersP, "fdr")]
+pathwayPvals[,fishersQ := na.omit(fishersQ) , by = geneSet]
+
+pathwayPvals[betaUniformMixtureQ < 0.01][pathwayType == "Drug Action"][order(-scoreSum)]
+
+pathwayPvals[fishersQ < 0.01][pathwayType == "Drug Action"][order(-scoreSum)]
+
+```
+
