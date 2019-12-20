@@ -17,7 +17,7 @@
 #' @family P-value sum tests
 #' @references Luo, W., Friedman, M. S., Shedden, K., Hankenson, K. D., & Woolf, P. J. (2009). GAGE: generally applicable gene set enrichment for pathway analysis. BMC Bioinformatics
 #' @references Stewart T, Strijbosch LWG, Moors H, van Batenburg P. A Simple Approximation to the Convolution of Gamma Distributions. 2007
-#' @importFrom stats pgamma
+#' @importFrom actuar pphtype
 #' @include Pvalues_S4Class.R
 #' @export
 setGeneric("betaUniformPvalueSumTest",
@@ -38,17 +38,47 @@ setMethod("betaUniformPvalueSumTest",
             if(na.rm){testPvalues <- na.omit(testPvalues)}
             
             nValues <- length(testPvalues)
-            
             fittedBetaShape <- betaUniformFit@a
             uniformProportion <- betaUniformFit@lambda
             
             testStatistic <- sum(-log(testPvalues))
             
-            mu <- randomSetSize*(uniformProportion +  (1-uniformProportion)*scaleParam)
-            sigmaSq <-  randomSetSize*(uniformProportion +  (1-uniformProportion)*scaleParam^2)
+            transitionMatrix <- hyperexponentialSumTransitionMatrix(nValues, uniformProportion, fittedBetaShape)
             
-            # Convolution of two gamma functions, taken from Stewart et al.
-            combinedPval <- pgamma(testStatistic, shape = (mu^2)/sigmaSq, scale = sigmaSq/mu, lower.tail = F)
+            phaseRateP <- pphtype(testStatistic,
+                                  prob = c(c(uniformProportion, 1-uniformProportion), rep(0,2*(nValues-1))), #Starting probability vector
+                                  rates = as.matrix(transitionMatrix),
+                                  lower.tail = FALSE)
             
-            return( new("Pvalue", mkScalar(combinedPval)) )
+            return( new("Pvalue", mkScalar(phaseRateP)) )
           })
+
+#' Model a sum of log-transformed beta-uniform mixture draws as a sum of hyperexponential distributions: a phase-type distribution
+#' 
+#' The distribution of a log-trasnformed beta-uniform draw is a hyperexponential distribution. The distribution of the sum of multiple
+#' such hyperexponentials does nto have a name, but can be treated as a phase-type distribution with appropriate transition matrix.
+#' 
+#' @references \url{https://en.wikipedia.org/wiki/Phase-type_distribution}
+#' @import Matrix
+constructHyperexponentialSumTransitionMatrix <- function(nValues, uniformProportion, fittedBetaShape){
+
+  recurrentStateMatrixTile <- Matrix(c(-1,0,0,-fittedBetaShape), ncol = 2, nrow = 2)
+  transitionStateMatrixTile <- Matrix(c(uniformProportion, uniformProportion*fittedBetaShape,
+                                       (1-uniformProportion),(1-uniformProportion)*fittedBetaShape), nrow = 2, ncol = 2)
+  
+  hyperexponentialSumTransitionMatrix <- kronecker(Matrix::diag(nrow = randomSetSize, ncol = randomSetSize), recurrentStateMatrixTile)
+  
+  # If the number of values is 1, then we have a hyperexponeitial distribution and this transition matrix is suitable
+  
+  # For nValues = 2, we can just insert the tile describing transition from state 1 to 2 only
+  if(randomSetSize == 2){  hyperexponentialSumTransitionMatrix[1:2,3:4] <- transitionStateMatrixTile}
+  
+  # for the general case, 
+  if(randomSetSize > 2){
+    
+    hyperexponentialSumTransitionMatrix <- hyperexponentialSumTransitionMatrix +
+      # Create an off diagonal matrix and add the transition tiles in
+      kronecker({M <- Matrix(0, nrow = randomSetSize, ncol = randomSetSize); diag(M[,-1]) <- 1; M}, transitionStateMatrixTile) }
+  
+  return(hyperexponentialSumTransitionMatrix)
+}
