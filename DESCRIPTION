@@ -12,8 +12,9 @@ ByteCompile: TRUE
 LazyData: true
 Encoding: UTF-8
 Imports:
-    data.table (>= 1.11.0),
     assertthat (>= 0.2),
+    actuar (>= 2.3),
+    data.table (>= 1.11.0),
     ggplot2 (>= 1.0),
     purrr (>= 0.2),
     magrittr (>= 1.5),
