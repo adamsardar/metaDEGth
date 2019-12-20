@@ -7,6 +7,38 @@ editor_options:
 
 WORK HERE - we should be able to self sample
 
+```{r}
+
+sourceCpp(code = 
+
+'// We can now use the BH package
+// [[Rcpp::depends(BH)]]
+
+#include <Rcpp.h>
+#include <boost/math/distributions/hyperexponential.hpp>
+
+using namespace Rcpp;
+
+// [[Rcpp::export]]
+double pHyperExponentialTail(double testStat, NumericVector generatorProbabilities, NumericVector rates) {
+  
+  boost::math::hyperexponential hypexp(generatorProbabilities, rates);
+  
+  return boost::math::cdf(boost::math::complement(hypexp, testStat));
+}
+
+// [[Rcpp::export]]
+NumericVector timesTwo(NumericVector x) {
+  return x * 2;
+}')
+
+```
+
+
+```{r}
+```
+
+
 
 ```{r}
 
@@ -32,7 +64,7 @@ for(i in 1:1E4){
   
   randomSetSize <- rpois(1,10)
   
-  random_draws <- map(1:1000, ~{rbetaUniformFunc(randomSetSize, fittedBetaShape, uniformProportion)})
+  random_draws <- map(1:1E4, ~{rbetaUniformFunc(randomSetSize, fittedBetaShape, uniformProportion)})
   # random_draws <- map(1:1000, ~{runif(n = randomSetSize)}); uniformProportion <- 1
   #random_draws <- map(1:1000, ~{rbeta(n = randomSetSize, shape1 = fittedBetaShape, shape2 = 1)}) ; uniformProportion <- 0
   
@@ -45,40 +77,85 @@ for(i in 1:1E4){
   mu <- randomSetSize*(uniformProportion +  (1-uniformProportion)*scaleParam)
   sigmaSq <-  randomSetSize*(uniformProportion +  (1-uniformProportion)*scaleParam^2)
 
-  combinedPval <- pgamma(testStats[1], shape = (mu^2)/sigmaSq, scale = sigmaSq/mu, lower.tail = F)
+  combinedPval <- pgamma(testStats[1], shape = randomSetSize*uniformProportion, scale = 1, lower.tail = FALSE) + 
+    pgamma(testStats[1], shape = randomSetSize*(1-uniformProportion), rate = fittedBetaShape, lower.tail = FALSE)
   
-  nullModelTests %<>% c(list(data.table(empiricalGTE, fisherPval, combinedPval, size = randomSetSize)))
+  hyperexponentialSumTransitionMatrix <- constructHyperexponentialSumTransitionMatrix(randomSetSize, uniformProportion, fittedBetaShape)
+  
+  phaseRateP <- pphtype(testStats[1],
+                        prob = c(c(uniformProportion, 1-uniformProportion), rep(0,2*(randomSetSize-1))),
+                        rates = as.matrix(hyperexponentialSumTransitionMatrix),
+                        lower.tail = FALSE)
+  
+  # Welch-Satterthwaite Approximation for a sum of exponentials, some with different paramenters
+  approxPval <- pgamma(testStats[1], shape = (mu^2)/sigmaSq, scale = sigmaSq/mu, lower.tail = F)
+  
+  nullModelTests %<>% c(list(data.table(empiricalGTE, fisherPval, combinedPval, approxPval, phaseRateP, size = randomSetSize)))
 }
 
 
+microbenchmark::microbenchmark(
+  
+    combinedPval <- pgamma(testStats[1], shape = randomSetSize*uniformProportion, scale = 1, lower.tail = FALSE) + 
+    pgamma(testStats[1], shape = randomSetSize*(1-uniformProportion), rate = fittedBetaShape, lower.tail = FALSE),
+  
+  hyperexponentialSumTransitionMatrix <- constructHyperexponentialSumTransitionMatrix(randomSetSize, uniformProportion, fittedBetaShape),
+  
+  phaseRateP <- pphtype(testStats[1],
+                        prob = c(c(uniformProportion, 1-uniformProportion), rep(0,2*(randomSetSize-1))),
+                        rates = as.matrix(hyperexponentialSumTransitionMatrix),
+                        lower.tail = FALSE),
+  
+  # Welch-Satterthwaite Approximation for a sum of exponentials, some with different paramenters
+  approxPval <- pgamma(testStats[1], shape = (mu^2)/sigmaSq, scale = sigmaSq/mu, lower.tail = F)
+)
+
 ggplot(data = data.frame(x = c(0, 100)), aes(x)) +
+  
   stat_function(fun = dgamma, args = list(rate = fittedBetaShape, shape = randomSetSize), colour = "red") +
   stat_function(fun = dgamma, args = list(rate = 1, shape = randomSetSize), colour = "black") +
-    stat_function(fun = dgamma, args = list(scale = sigmaSq/mu, shape = (mu^2)/sigmaSq), colour = "pink") +
-  geom_density(data = data.table(x = testStats), colour = "blue") +
+  stat_function(fun = dgamma, args = list(scale = sigmaSq/mu, shape = (mu^2)/sigmaSq), colour = "pink") +
+  
+  geom_histogram(data = data.table(x = testStats), aes( y = ..density..), binwidth = 1, fill = "grey", color = "black") +
+  
+  stat_function(fun = dphtype, args = list(prob = c(c(uniformProportion, 1-uniformProportion), rep(0,2*(randomSetSize-1))),
+                                           rates = as.matrix(hyperexponentialSumTransitionMatrix)), colour = "green", size = 1) +
+  
   ylab("") +
   scale_y_continuous(breaks = NULL) +
   geom_vline(xintercept = testStats[1]) 
 
 
-
-
-
-
 empiricalVsPred <- rbindlist(nullModelTests)
-empiricalVsPred[, diffBeta := (empiricalGTE - combinedPval)]
+
+empiricalVsPred[empiricalGTE <= 1E-2]
+
+
 
 empiricalVsPred[,qplot(x = combinedPval, y = (empiricalGTE - combinedPval))] + 
   scale_x_log10(breaks = 10^(-seq(0,6))) +
   scale_y_continuous(breaks = seq(-0.13,0.1,0.01)) +
   theme_bw()
 
-empiricalVsPred[,qplot(x = size, y = (empiricalGTE - fisherPval))]
+empiricalVsPred[,qplot(x = combinedPval, y = (empiricalGTE - approxPval))] + 
+  scale_x_log10(breaks = 10^(-seq(0,6))) +
+  scale_y_continuous(breaks = seq(-0.13,0.1,0.01)) +
+  theme_bw()
 
-empiricalVsPred %>%
+empiricalVsPred[,qplot(x = combinedPval, y = (empiricalGTE -  phaseRateP))] + 
+  scale_x_log10(breaks = 10^(-seq(0,6))) +
+  scale_y_continuous(breaks = seq(-0.13,0.1,0.01)) +
+  theme_bw()
+
+
+empiricalVsPred[,qplot(x = size, y = (empiricalGTE - phaseRateP))]
+
+empiricalVsPred[empiricalGTE <= 1E-2] %>%
   ggplot(aes(x = empiricalGTE)) +
   geom_point(aes(y = fisherPval), colour = "blue") +
   geom_point(aes(y = combinedPval), colour = "red") +
+  geom_point(aes(y = approxPval), colour = "green") +
+  geom_point(aes(y = phaseRateP), colour = "pink") +
   geom_abline() +
   theme_bw() +
   scale_x_log10() +
@@ -86,74 +163,3 @@ empiricalVsPred %>%
 
 ```
 
-
-
-```{r}
-
-randDraws <- rbetaUniformFunc(10000,fittedBetaShape,uniformProportion)
-
- qplot( randDraws * (1-uniformProportion)/uniformProportion)
-
- sort(-randDraws^(fittedBetaShape-1))
- 
-
-transformed <- (fittedBetaShape-1) * (  (randDraws - uniformProportion)/(fittedBetaShape*nonUniformProportion) )
-
-qplot(x = dom, y = 0.5 + 0.5*tanh(dom/2)  )
-
-
-
-```
-
-
-
-
-
-
-
-test against uniform random draws
-
-```{r}
-
-
-
-# P ~ (1-\lambda)\beta(a,1) + \lambda\beta(1,1)
-pureNoiseBetaUniformModel <- fitBetaUniformMixtureDistribution(runif(10000), nStarts = 20)
-fittedBetaShape <- pureNoiseBetaUniformModel@a
-nonUniformProportion <- pureNoiseBetaUniformModel@lambda
-
-
-
-
-
-nullModelTests <- list()
-
-for(i in 1:1000){
-  
-  randomSetSize <- rpois(1,10)
-  
-  random_draws <- map(1:1000, ~{runif(n = randomSetSize)})
-  
-  testStats <- map_dbl(random_draws, ~ -sum(log(.x)))
-  
-  empiricalGTE <- length(which(testStats[1] <= testStats[-1]))/length(testStats[-1])
-  
-  fisherPval <- pgamma(testStats[1], shape = randomSetSize, rate = 1, lower.tail = FALSE) 
-  
-  # P ~ (1-\lambda)\beta(a,1) + \lambda\beta(1,1)
-  combinedPval <- nonUniformProportion * qgamma(testStats[1], shape = randomSetSize, rate = 1, lower.tail = FALSE) +
-    (1-nonUniformProportion) * qgamma(testStats[1], shape = randomSetSize, rate = fittedBetaShape, lower.tail = FALSE)
-  
-  
-  nullModelTests %<>% c(list(data.table(empiricalGTE, fisherPval, combinedPval, size = randomSetSize)))
-}
-
-
-rbindlist(nullModelTests) %>%
-  ggplot(aes(x = empiricalGTE)) +
-  geom_point(aes(y = fisherPval), colour = "blue") +
-  geom_point(aes(y = combinedPval), colour = "red") +
-  geom_abline() +
-  theme_bw()
-
-```
