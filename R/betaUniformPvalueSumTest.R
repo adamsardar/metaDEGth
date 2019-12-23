@@ -16,7 +16,7 @@
 #' @seealso BioNet::fitBumModel
 #' @family P-value sum tests
 #' @references Luo, W., Friedman, M. S., Shedden, K., Hankenson, K. D., & Woolf, P. J. (2009). GAGE: generally applicable gene set enrichment for pathway analysis. BMC Bioinformatics
-#' @references Stewart T, Strijbosch LWG, Moors H, van Batenburg P. A Simple Approximation to the Convolution of Gamma Distributions. 2007
+#' @references \url{https://en.wikipedia.org/wiki/Phase-type_distribution}
 #' @importFrom actuar pphtype
 #' @include Pvalues_S4Class.R
 #' @export
@@ -43,13 +43,14 @@ setMethod("betaUniformPvalueSumTest",
             
             testStatistic <- sum(-log(testPvalues))
             
-            transitionMatrix <- hyperexponentialSumTransitionMatrix(nValues, uniformProportion, fittedBetaShape)
+            transitionMatrix <- constructHyperexponentialSumTransitionMatrix(nValues, uniformProportion, fittedBetaShape)
             
-            phaseRateP <- pphtype(testStatistic,
-                                  prob = c(c(uniformProportion, 1-uniformProportion), rep(0,2*(nValues-1))), #Starting probability vector
-                                  rates = as.matrix(transitionMatrix),
-                                  lower.tail = FALSE)
+            initialProb <- Matrix(0,ncol = ncol(transitionMatrix), nrow = 1)
+            initialProb[1:2] <- c(uniformProportion, 1-uniformProportion)
             
+            # The inverse CDF of the phase-type distribution is sum( alpha * exp(x*S) ), where S is the transition matrix and alpha the initial probability
+            phaseRateP <- sum(initialProb %*% Matrix::expm(testStatistic*transitionMatrix))
+          
             return( new("Pvalue", mkScalar(phaseRateP)) )
           })
 
@@ -71,7 +72,7 @@ constructHyperexponentialSumTransitionMatrix <- function(nValues, uniformProport
   # If the number of values is 1, then we have a hyperexponeitial distribution and this transition matrix is suitable
   
   # For nValues = 2, we can just insert the tile describing transition from state 1 to 2 only
-  if(randomSetSize == 2){  hyperexponentialSumTransitionMatrix[1:2,3:4] <- transitionStateMatrixTile}
+  if(randomSetSize == 2){  hyperexponentialSumTransitionMatrix[1:2,3:4] <- transitionStateMatrixTile }
   
   # for the general case, 
   if(randomSetSize > 2){
