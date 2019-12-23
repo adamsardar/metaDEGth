@@ -1,4 +1,3 @@
-library(BioNet)
 data("siTAZdiffex_HFL1_diffexDT")
 
 siTAZ_betaUnifModel <- fitBetaUniformMixtureDistribution(siTAZdiffex_HFL1_diffexDT$siTAZ1_pValue, nStarts = 5)
@@ -7,7 +6,7 @@ test_that("Ensure equivilence with BioNet implementation", {
   
   metaDEGth_betaUniformScores <- betaUniformScore(siTAZ_betaUnifModel, FDR = 0.05)
   
-  BioNet_betaUniformScores <- scoreFunction(list(a = siTAZ_betaUnifModel@a,
+  BioNet_betaUniformScores <- BioNet::scoreFunction(list(a = siTAZ_betaUnifModel@a,
             lambda = siTAZ_betaUnifModel@lambda,
             pvalues = siTAZ_betaUnifModel@pvalues@.Data), fdr = 0.05)
   
