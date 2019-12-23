@@ -164,6 +164,7 @@ globalVariables(c("..density.."))
 #' @param outputParameters Flag to specify if the plot should list the fitted parameters for the model (defualt:TRUE)
 #' @return A named list with three ggplots: p-value distribution; QQplot of P-values against a the fitted mixture model and liklihood surface of paramter estimates.
 #' @import ggplot2
+#' @import latex2exp
 #' @export
 plot.BetaUniformModel <- function(x, showFit = TRUE, outputParameters = TRUE, outputFormula = TRUE, studyName = NULL, ...){
   
@@ -186,8 +187,8 @@ plot.BetaUniformModel <- function(x, showFit = TRUE, outputParameters = TRUE, ou
   if(showFit){
     
     pVal_plot <-   pVal_plot +
-      stat_function(fun = betaUniformDensity, args = list(a = x@a, lambda = x@lambda), aes(colour = "Beta-Uniform Mixture"),size=1.5) +
-      stat_function(fun = uniformComponentFunc, args = list(a = x@a, lambda = x@lambda),  aes(colour = "Upper Bound On\nUniform Component"),size=1.5) +
+      stat_function(fun = dbetauniform, args = list(a = x@a, lambda = x@lambda), aes(colour = "Beta-Uniform Mixture"),size=1.5) +
+      stat_function(fun = uniformComponentBound, args = list(a = x@a, lambda = x@lambda),  aes(colour = "Upper Bound On\nUniform Component"),size=1.5) +
       scale_colour_manual("Model Density", values = c("red", "black")) +
       theme(legend.position=c(0.8,0.7), plot.title = element_text(size=20))
   }
@@ -195,11 +196,11 @@ plot.BetaUniformModel <- function(x, showFit = TRUE, outputParameters = TRUE, ou
   if(outputFormula){
     
     FBmodelEqn <- TeX("Fitted Model: $f(p|\\alpha,\\lambda) = \\lambda + (1-\\lambda)p^{\\alpha-1}$",output = "character")
-    pVal_plot <- pVal_plot + annotate("text",x=0.5,y=betaUniformDensity(0.35, x@a, x@lambda)+2,label = FBmodelEqn, parse=TRUE, size = 4)
+    pVal_plot <- pVal_plot + annotate("text",x=0.5,y=dbetauniform(0.35, x@a, x@lambda)+2,label = FBmodelEqn, parse=TRUE, size = 4)
   }
   
   pVal_qqPlot <- ggplot(data = NULL, aes(sample = x@pvalues@.Data)) +
-    stat_qq(distribution = qbetaUniformFunc, dparams = list(a = x@a, lambda =x@lambda)) +
+    stat_qq(distribution = qbetauniform, dparams = list(a = x@a, lambda =x@lambda)) +
     theme_bw() + 
     labs(title  = "QQ plot of observations against fitted Beta-Uniform model",
          subtitle = studyName,
@@ -210,7 +211,7 @@ plot.BetaUniformModel <- function(x, showFit = TRUE, outputParameters = TRUE, ou
   paramSpace <- expand.grid(a = seq(0,1,0.1), lambda = seq(0,1,0.1)) %>% data.table
   
   pVals <- x@pvalues@.Data #slot access is expensive
-  paramSpace[, LLH := sum(log( betaUniformDensity(pVals, a, lambda) )), by = .(a, lambda)]
+  paramSpace[, LLH := sum(log( dbetauniform(pVals, a, lambda) )), by = .(a, lambda)]
 
   LLsurface_plot <- ggplot(paramSpace[LLH > 0], aes(a, lambda)) +
     geom_tile(aes(fill=LLH), colour = "grey50") +
@@ -229,7 +230,7 @@ plot.BetaUniformModel <- function(x, showFit = TRUE, outputParameters = TRUE, ou
                     ", LLH =",round(-x@negLLH,digits = 2),"$"), output = "character")
     
     LLsurface_plot <- LLsurface_plot + annotate("text", x=0.5, y=0.5, label = eq, parse = TRUE, size = 4)
-    pVal_plot <- pVal_plot + annotate("text", x=0.5, y=betaUniformDensity(0.35, x@a, x@lambda)+1, label = eq, parse = TRUE, size = 4)
+    pVal_plot <- pVal_plot + annotate("text", x=0.5, y=dbetauniform(0.35, x@a, x@lambda)+1, label = eq, parse = TRUE, size = 4)
   }
     
   return(structure(list(pValHist = pVal_plot,
