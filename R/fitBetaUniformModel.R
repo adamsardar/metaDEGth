@@ -18,9 +18,9 @@ globalVariables(c("..density.."))
 #' 
 #' @examples 
 #' library(ggplot2)
-#' data(siTAZdiffex_DT)
+#' data(siTAZdiffex_HFL1_diffexDT)
 #' 
-#' siTAZ1_BetaUniformMod <- fitBetaUniformMixtureDistribution(siTAZdiffex_DT$siTAZ1_pValue)
+#' siTAZ1_BetaUniformMod <- fitBetaUniformMixtureDistribution(siTAZdiffex_HFL1_diffexDT$siTAZ1_pValue)
 #' 
 #' siTAZ1_BetaUniformMod
 #' 
@@ -132,14 +132,11 @@ rbetaUniformFunc <- function(n, a, lambda){
   
   # A simple translation of the beta-uniform mixture distribution 
   # (1-lambda)*qbeta(p,a,1) + lambda*qbeta(p,1,1) 
-  betaUniformDraws <- numeric(n)
+  nUnifDraws <- rbinom(1, n, lambda)
   
-  #Bernoulli draws
-  signalComponent <- runif(n) < lambda
+  betaUniformDraws <- sample(c(runif(nUnifDraws),
+                               rbeta(n = (n-nUnifDraws),  shape1 = a, shape2 = 1)))
   
-  betaUniformDraws[which(signalComponent)] <- runif(n = length(which(signalComponent)))
-  betaUniformDraws[which(!signalComponent)] <- rbeta(n = length(which(!signalComponent)),  shape1 = a, shape2 = 1)
-
   return(betaUniformDraws)
 }
 
