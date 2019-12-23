@@ -211,4 +211,4 @@ on_failure(validateDistanceMatrix) <- function(call, env){ paste0(deparse(call$x
 ############
 
 #In particular for use with validator functions
-is.pval <- function(x){ is.numeric(x) & x >=  0 & x <= 1}
+is.pval <- function(x){ is.numeric(x) & x >=  0 & (x-1) <= 1E-12} # allow small epsilon
