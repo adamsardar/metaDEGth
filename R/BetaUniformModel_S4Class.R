@@ -42,7 +42,7 @@ setMethod("convertFromBUM", signature = c(obj = "bum"),
                              a = mkScalar(obj$a), 
                              lambda = mkScalar(obj$lambda),
                              pvalues = obj$pvalues,
-                             negLLH = mkScalar(obj$negLLH))} )
+                             negLLH = mkScalar(obj$negLL))} )
 
 ## Distribution methods ##
 
