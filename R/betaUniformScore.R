@@ -10,7 +10,7 @@
 #' 
 #' @return betaUniformScores A vector of P-Value scores
 #' @export
-#' @import igraph
+#' @importFrom igraph V
 #' @importFrom stats pbeta
 #' @importFrom Biobase mkScalar
 #' @include Pvalues_S4Class.R

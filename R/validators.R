@@ -29,6 +29,7 @@ on_failure(validateAnnotationDT) <- function(call, env){ paste0(deparse(call$x),
 
 ############
 
+#' @importFrom igraph is.igraph
 validateNetwork <- function(candidateNet, directed = FALSE){
   
   assert_that(is.igraph(candidateNet),
@@ -191,23 +192,6 @@ on_failure(validateSingleInteger) <- function(call, env){ paste0(deparse(call$x)
 
 ############
 
-#' @importFrom Matrix isSymmetric
-validateDistanceMatrix <- function(candidateDistanceMatrix, searchNetwork){
-  
-  validateNetwork(searchNetwork, FALSE) 
-  
-  assert_that(is.matrix(candidateDistanceMatrix),
-         ncol(candidateDistanceMatrix) == vcount(searchNetwork),
-         nrow(candidateDistanceMatrix) == vcount(searchNetwork),
-         isSymmetric(candidateDistanceMatrix) )
-  
-  invisible(candidateDistanceMatrix)
-}
-
-on_failure(validateDistanceMatrix) <- function(call, env){ paste0(deparse(call$x), ":  distance matrix must be symmetric and be the same size as the input network")}
-
-############
-
 validateSingleInteger <- function(candidateInteger){
   
   assert_that(length(candidateInteger) == 1,
@@ -223,7 +207,6 @@ on_failure(validateSingleInteger) <- function(call, env){ paste0(deparse(call$x)
 
 ############
 
-#' @importFrom Matrix isSymmetric
 validateSinglePositiveDefinite <- function(candidatePosDef){
   
   assert_that(is.numeric(candidatePosDef),
