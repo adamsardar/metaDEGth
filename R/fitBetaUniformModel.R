@@ -43,7 +43,7 @@ setMethod("fitBetaUniformMixtureDistribution",
             
             #Fit beta-uniform distribution from a number of uniform random starting points. We need to wrap the method safely  
             optimiseBetaUniformParams <- possibly(
-              ~ fitdistr(x = na.omit(pValues), densfun = betaUniformDensity,
+              ~ fitdistr(x = na.omit(pValues), densfun = dbetauniform,
                          start = list(a = runif(1, min = epsilon, max = 1), 
                                       lambda = runif(1, min = epsilon, max = 1-epsilon) ),
                          lower = c(epsilon, epsilon),
@@ -97,7 +97,7 @@ setMethod("fitBetaUniformMixtureDistribution",
 #' Density function for Beta-uniform Model
 #' @references Pounds, S., & Morris, S. W. (2003). Estimating the occurrence of false positives and false negatives in microarray studies by approximating and partitioning the empirical distribution of p-values. Bioinformatics
 #' @importFrom stats dbeta
-betaUniformDensity <- function(x, a, lambda){
+dbetauniform <- function(x, a, lambda, log = FALSE){
   
   # The beta-uniform decomposition can be written as a mixture distribution:
   # (1-lambda)*dbeta(x,a,1) + lambda*dbeta(x,1,1)
@@ -107,7 +107,12 @@ betaUniformDensity <- function(x, a, lambda){
   
   # Further, the beta-distribution simplifies to a Kumaraswamy distribution when one of the Beta distribution parameters is unity. This is an order of magnitude faster than the first mixture distribution
   # See https://en.wikipedia.org/wiki/Kumaraswamy_distribution
-  return((1-lambda)* a * x^(a-1)  + lambda)
+  
+  if(log){
+    log((1-lambda)* a * x^(a-1)  + lambda)
+  }else{
+    (1-lambda)* a * x^(a-1)  + lambda
+  }
 }
 
 
@@ -115,7 +120,7 @@ betaUniformDensity <- function(x, a, lambda){
 #' Quantile function for Beta-uniform model
 #' @references Pounds, S., & Morris, S. W. (2003). Estimating the occurrence of false positives and false negatives in microarray studies by approximating and partitioning the empirical distribution of p-values. Bioinformatics
 #' @importFrom stats qbeta
-qbetaUniformFunc <- function(p, a, lambda){
+qbetauniform <- function(p, a, lambda){
   
   # A simple translation of the beta-uniform mixture distribution 
   # (1-lambda)*qbeta(p,a,1) + lambda*qbeta(p,1,1) 
@@ -127,13 +132,24 @@ qbetaUniformFunc <- function(p, a, lambda){
 
 #' Random draw function for Beta-uniform model
 #' @references Pounds, S., & Morris, S. W. (2003). Estimating the occurrence of false positives and false negatives in microarray studies by approximating and partitioning the empirical distribution of p-values. Bioinformatics
-#' @importFrom stats qbeta
-rbetaUniformFunc <- function(n, a, lambda){
+#' @importFrom stats runif rbeta
+#' @export
+rbetauniform <- function(n, a, lambda){
+  
+  validateSingleInteger(n)
+  validateSinglePositiveDefinite(n)
+  
+  validateSinglePositiveDefinite(a)
+  
+  validateNumericCutoff(lambda)
+  validatePvalues(lambda)
+  validateSinglePositiveDefinite(lambda)
   
   # A simple translation of the beta-uniform mixture distribution 
   # (1-lambda)*qbeta(p,a,1) + lambda*qbeta(p,1,1) 
-  nUnifDraws <- rbinom(1, n, lambda)
+  nUnifDraws <- rbinom(1, n, lambda) # The number of draws from unfirom will be binomially distributed
   
+  # Create a random permutation of the signal and noise components stapled together
   betaUniformDraws <- sample(c(runif(nUnifDraws),
                                rbeta(n = (n-nUnifDraws),  shape1 = a, shape2 = 1)))
   
@@ -142,8 +158,7 @@ rbetaUniformFunc <- function(n, a, lambda){
 
 #' Upper bound on Uniform component of Beta-uniform model
 #' @references Pounds, S., & Morris, S. W. (2003). Estimating the occurrence of false positives and false negatives in microarray studies by approximating and partitioning the empirical distribution of p-values. Bioinformatics
-#' @importFrom stats dunif
-uniformComponentFunc <- function(x, a, lambda){
+uniformComponentBound <- function(x, a, lambda){
   
   # A literal translation of the maths from Morris & Pounds would be:
   # ((1-lambda)*a + lambda)*dunif(x)

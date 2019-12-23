@@ -15,11 +15,11 @@ susceptibleCellLine_BetaUniformModel <- fitBetaUniformMixtureDistribution(erloti
 fittedBetaShape <- susceptibleCellLine_BetaUniformModel@a
 uniformProportion <- susceptibleCellLine_BetaUniformModel@lambda
 
-fitBetaUniformMixtureDistribution(rbetaUniformFunc(100000,fittedBetaShape,nonUniformProportion))
+fitBetaUniformMixtureDistribution(rbetauniform(100000,fittedBetaShape,nonUniformProportion))
 
 plot.BetaUniformModel(susceptibleCellLine_BetaUniformModel, outputParameters = F, outputFormula = F)
 
-qplot(rbetaUniformFunc(10000, a = susceptibleCellLine_BetaUniformModel@a, lambda = susceptibleCellLine_BetaUniformModel@lambda))
+qplot(rbetauniform(10000, a = susceptibleCellLine_BetaUniformModel@a, lambda = susceptibleCellLine_BetaUniformModel@lambda))
 
 
 
@@ -29,7 +29,7 @@ for(i in 1:1E4){
   
   randomSetSize <- rpois(1,10)
   
-  random_draws <- map(1:1E4, ~{rbetaUniformFunc(randomSetSize, fittedBetaShape, uniformProportion)})
+  random_draws <- map(1:1E4, ~{rbetauniform(randomSetSize, fittedBetaShape, uniformProportion)})
   # random_draws <- map(1:1000, ~{runif(n = randomSetSize)}); uniformProportion <- 1
   #random_draws <- map(1:1000, ~{rbeta(n = randomSetSize, shape1 = fittedBetaShape, shape2 = 1)}) ; uniformProportion <- 0
   
