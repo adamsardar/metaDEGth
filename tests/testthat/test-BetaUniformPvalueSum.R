@@ -1,3 +1,4 @@
+nDraws <- 1000
 
 fakeShapeParam <- 0.4
 fakeUniformFraction <- 0.6
@@ -7,14 +8,12 @@ randomBUdraws <- rbetauniform(nDraws, 0.4, 0.6)
 fakeBUM_S3obj <- list(a = mkScalar(fakeShapeParam), 
                       lambda = fakeUniformFraction, 
                       pvalues = randomBUdraws,
-                      negLLH = -sum(dbetauniform(randomBUdraws, 0.4, 0.6, log = TRUE)))
+                      negLL = -sum(dbetauniform(randomBUdraws, 0.4, 0.6, log = TRUE)))
 class(fakeBUM_S3obj) <- "bum"
 
 
 test_that("Contrast Fisher and BetaUniformSum tests",{
-  
-  nDraws = 1000
-  
+
   expect_error(rbetauniform(nDraws, -0.4, 0.6))
   expect_error(rbetauniform(nDraws, 0.4, 1.2))
   
