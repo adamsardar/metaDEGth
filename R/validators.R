@@ -150,8 +150,6 @@ validatePvalues <- function(candidatePvalues){
   
   assert_that( all( is.pval(candidatePvalues), na.rm = TRUE) )
   
-  vertex_attr_names(testNet)
-  
   invisible(candidatePvalues)
 }
 
@@ -207,6 +205,36 @@ validateDistanceMatrix <- function(candidateDistanceMatrix, searchNetwork){
 }
 
 on_failure(validateDistanceMatrix) <- function(call, env){ paste0(deparse(call$x), ":  distance matrix must be symmetric and be the same size as the input network")}
+
+############
+
+validateSingleInteger <- function(candidateInteger){
+  
+  assert_that(length(candidateInteger) == 1,
+              is.numeric(candidateInteger), # We don't want to restrict ourselves to the integer class
+              !is.infinite(candidateInteger),
+              round(candidateInteger) == candidateInteger) # Is it a whole number
+  
+  invisible(candidateInteger)
+}
+
+on_failure(validateSingleInteger) <- function(call, env){ paste0(deparse(call$x), ":  should be a single whole number") }
+
+
+############
+
+#' @importFrom Matrix isSymmetric
+validateSinglePositiveDefinite <- function(candidatePosDef){
+  
+  assert_that(is.numeric(candidatePosDef),
+              length(candidatePosDef) == 1,
+              candidatePosDef > 0)
+  
+  invisible(candidatePosDef)
+}
+
+on_failure(validateSinglePositiveDefinite) <- function(call, env){ paste0(deparse(call$x), ": should be a single positive definite number")}
+
 
 ############
 
