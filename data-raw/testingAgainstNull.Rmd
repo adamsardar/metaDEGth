@@ -5,41 +5,6 @@ editor_options:
   chunk_output_type: console
 ---
 
-WORK HERE - we should be able to self sample
-
-```{r}
-
-sourceCpp(code = 
-
-'// We can now use the BH package
-// [[Rcpp::depends(BH)]]
-
-#include <Rcpp.h>
-#include <boost/math/distributions/hyperexponential.hpp>
-
-using namespace Rcpp;
-
-// [[Rcpp::export]]
-double pHyperExponentialTail(double testStat, NumericVector generatorProbabilities, NumericVector rates) {
-  
-  boost::math::hyperexponential hypexp(generatorProbabilities, rates);
-  
-  return boost::math::cdf(boost::math::complement(hypexp, testStat));
-}
-
-// [[Rcpp::export]]
-NumericVector timesTwo(NumericVector x) {
-  return x * 2;
-}')
-
-```
-
-
-```{r}
-```
-
-
-
 ```{r}
 
 
@@ -80,13 +45,15 @@ for(i in 1:1E4){
   combinedPval <- pgamma(testStats[1], shape = randomSetSize*uniformProportion, scale = 1, lower.tail = FALSE) + 
     pgamma(testStats[1], shape = randomSetSize*(1-uniformProportion), rate = fittedBetaShape, lower.tail = FALSE)
   
-  hyperexponentialSumTransitionMatrix <- constructHyperexponentialSumTransitionMatrix(randomSetSize, uniformProportion, fittedBetaShape)
+  # hyperexponentialSumTransitionMatrix <- constructHyperexponentialSumTransitionMatrix(randomSetSize, uniformProportion, fittedBetaShape)
+  # 
+  # initialProb <- Matrix(0,ncol = ncol(hyperexponentialSumTransitionMatrix), nrow = 1)
+  # initialProb[1:2] <- c(uniformProportion, 1-uniformProportion)
+     
+  # CDF of phase rate distribution os 1- alpha * exp(x*S)*oneVec
+ # phaseRateP <- sum(initialProb %*% Matrix::expm(testStats[1]*hyperexponentialSumTransitionMatrix))
   
-  phaseRateP <- pphtype(testStats[1],
-                        prob = c(c(uniformProportion, 1-uniformProportion), rep(0,2*(randomSetSize-1))),
-                        rates = as.matrix(hyperexponentialSumTransitionMatrix),
-                        lower.tail = FALSE)
-  
+  phaseRateP <- betaUniformPvalueSumTest(random_draws[[1]], susceptibleCellLine_BetaUniformModel)
   # Welch-Satterthwaite Approximation for a sum of exponentials, some with different paramenters
   approxPval <- pgamma(testStats[1], shape = (mu^2)/sigmaSq, scale = sigmaSq/mu, lower.tail = F)
   
@@ -118,7 +85,7 @@ ggplot(data = data.frame(x = c(0, 100)), aes(x)) +
   
   geom_histogram(data = data.table(x = testStats), aes( y = ..density..), binwidth = 1, fill = "grey", color = "black") +
   
-  stat_function(fun = dphtype, args = list(prob = c(c(uniformProportion, 1-uniformProportion), rep(0,2*(randomSetSize-1))),
+  stat_function(fun = actuar::dphtype, args = list(prob = c(c(uniformProportion, 1-uniformProportion), rep(0,2*(randomSetSize-1))),
                                            rates = as.matrix(hyperexponentialSumTransitionMatrix)), colour = "green", size = 1) +
   
   ylab("") +
