@@ -40,7 +40,6 @@ test_that("Contrast Fisher and BetaUniformSum tests",{
 })
 
 
-
 test_that("Inspect transition rate matrix", {
   
   nVal <- 10
@@ -66,4 +65,28 @@ test_that("Inspect transition rate matrix", {
   transitionMatrixCopy <- transitionMatrix
   diag(transitionMatrixCopy) <- 0
   expect_true(all(transitionMatrixCopy >= 0 ), label = "All off-diagonal entries are positive semi-definite")
+})
+
+test_that("Compare accuracy against known phase-type distribution P-value (actuar package)",{
+  
+  nVal <- 5
+  
+  fakeBetaUniformObj <- convertFromBUM(fakeBUM_S3obj)
+  
+  fakePvalSet <- sample( seq(0.01,0.1,0.01), nVal)
+  
+  # The phase-type distribution is defined by its transition matrix
+  # https://en.wikipedia.org/wiki/Transition_rate_matrix  
+  transitionMatrix <- constructHyperexponentialSumTransitionMatrix(nVal, fakeUniformFraction, fakeShapeParam)
+  
+  expect_equal(
+    as.numeric(betaUniformPvalueSumTest( new("Pvalues", fakePvalSet), fakeBetaUniformObj)),
+  
+    actuar::pphtype(sum(-log(fakePvalSet)),
+          prob = c(c(fakeUniformFraction,1-fakeUniformFraction),rep(0, times = 2*(nVal-1))),
+          rates = as.matrix(transitionMatrix),
+          lower.tail = FALSE),
+    
+    tolerance = 1E-5)
+  
 })
