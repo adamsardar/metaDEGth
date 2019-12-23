@@ -26,6 +26,8 @@ test_that("Contrast Fisher and BetaUniformSum tests",{
                                              fakeBetaUniformObj), 
                    "Pvalue")
   
+  expect_warning(betaUniformPvalueSumTest( new("Pvalues", c(1E-320, sample(c(sample( seq(0.01,0.1,0.01), 10), NA, NA, NA, NA)))), fakeBetaUniformObj), regexp = "machine precision")
+  
   for(i in 1:10){
 
     fakePvalSet <- sample( seq(0.01,0.1,0.01), 10)

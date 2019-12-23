@@ -35,6 +35,8 @@ setMethod("fishersPvalueSumTest",
           function(testPvalues, na.rm = TRUE, ...){
             
             if(na.rm){testPvalues <- na.omit(testPvalues)}
+            if(length(testPvalues) == 0){stop("No non-NA P-values passed in to routine!")}
+            if(any(testPvalues < .Machine$double.xmin)){warning("One or more test P-values are less than machine precision. This could easily result in inaccuracies.")}
             
             testStatistic <- sum(-log(testPvalues))
             nValues <- length(testPvalues)

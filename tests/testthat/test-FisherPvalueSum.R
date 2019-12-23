@@ -9,6 +9,8 @@ test_that("Contrast against a chi-square hand-rolled version",{
   expect_s4_class( fishersPvalueSumTest( new("Pvalues", randomUnifDraws)), 
                    "Pvalue")
   
+  expect_warning(fishersPvalueSumTest( new("Pvalues", c(1E-320,randomUnifDraws))), regexp = "machine precision")
+  
   expect_identical(fishersPvalueSumTest( new("Pvalues", randomUnifDraws)),
                     new("Pvalue", fishersMethodByChiSq),
                    info = "Inspect Pvalues dispatch")
