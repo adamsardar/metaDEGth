@@ -1,5 +1,3 @@
-library(BioNet)
-
 nDraws <- 1E4
 
 fakeShapeParam <- 0.4
@@ -22,7 +20,7 @@ test_that("Contrast against another implementation from BioNet", {
   
   refittedBetaUniformModel <- fitBetaUniformMixtureDistribution(randomBUdraws)
   
-  suppressWarnings(refittedBUM <- fitBumModel(randomBUdraws, plot = FALSE))
+  suppressWarnings(refittedBUM <- BioNet::fitBumModel(randomBUdraws, plot = FALSE))
   
   expect_equivalent( refittedBetaUniformModel, convertFromBUM(refittedBUM), tolerance = 0.05)
 })
