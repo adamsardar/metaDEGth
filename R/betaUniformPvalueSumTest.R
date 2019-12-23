@@ -67,19 +67,19 @@ constructHyperexponentialSumTransitionMatrix <- function(nValues, uniformProport
   transitionStateMatrixTile <- Matrix(c(uniformProportion, uniformProportion*fittedBetaShape,
                                        (1-uniformProportion),(1-uniformProportion)*fittedBetaShape), nrow = 2, ncol = 2)
   
-  hyperexponentialSumTransitionMatrix <- kronecker(Matrix::diag(nrow = randomSetSize, ncol = randomSetSize), recurrentStateMatrixTile)
+  hyperexponentialSumTransitionMatrix <- kronecker(Matrix::diag(nrow = nValues, ncol = nValues), recurrentStateMatrixTile)
   
   # If the number of values is 1, then we have a hyperexponeitial distribution and this transition matrix is suitable
   
   # For nValues = 2, we can just insert the tile describing transition from state 1 to 2 only
-  if(randomSetSize == 2){  hyperexponentialSumTransitionMatrix[1:2,3:4] <- transitionStateMatrixTile }
+  if(nValues == 2){  hyperexponentialSumTransitionMatrix[1:2,3:4] <- transitionStateMatrixTile }
   
   # for the general case, 
-  if(randomSetSize > 2){
+  if(nValues > 2){
     
     hyperexponentialSumTransitionMatrix <- hyperexponentialSumTransitionMatrix +
       # Create an off diagonal matrix and add the transition tiles in
-      kronecker({M <- Matrix(0, nrow = randomSetSize, ncol = randomSetSize); diag(M[,-1]) <- 1; M}, transitionStateMatrixTile) }
+      kronecker({M <- Matrix(0, nrow = nValues, ncol = nValues); diag(M[,-1]) <- 1; M}, transitionStateMatrixTile) }
   
   return(hyperexponentialSumTransitionMatrix)
 }

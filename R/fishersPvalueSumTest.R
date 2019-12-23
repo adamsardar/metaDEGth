@@ -39,8 +39,8 @@ setMethod("fishersPvalueSumTest",
             testStatistic <- sum(-log(testPvalues))
             nValues <- length(testPvalues)
             
-            #Using the pgama parameterisation, rather than chi-squared, so as to be consistent with the betaUniformPvalueSumTest
-            combinedPval <- pgamma(testStatistic, shape = nValues, rate = 1, lower.tail = FALSE) 
+            #Using the pgama parameterisation, rather than chi-squared, so as to be consistent with paper derivation
+            fishersMethodPval <- pgamma(testStatistic, shape = nValues, rate = 1, lower.tail = FALSE) 
             
-            return( new("Pvalue", mkScalar(combinedPval)) )
+            return(new("Pvalue", mkScalar(fishersMethodPval)))
           })
