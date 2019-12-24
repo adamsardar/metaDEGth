@@ -64,23 +64,27 @@ setMethod("betaUniformPvalueSumTest",
 #' @import Matrix
 constructHyperexponentialSumTransitionMatrix <- function(nValues, uniformProportion, fittedBetaShape){
 
-  recurrentStateMatrixTile <- Matrix(c(-1,0,0,-fittedBetaShape), ncol = 2, nrow = 2)
-  transitionStateMatrixTile <- Matrix(c(uniformProportion, uniformProportion*fittedBetaShape,
-                                       (1-uniformProportion),(1-uniformProportion)*fittedBetaShape), nrow = 2, ncol = 2)
-  
-  hyperexponentialSumTransitionMatrix <- kronecker(Matrix::diag(nrow = nValues, ncol = nValues), recurrentStateMatrixTile)
-  
-  # If the number of values is 1, then we have a hyperexponeitial distribution and this transition matrix is suitable
-  
   # For nValues = 2, we can just insert the tile describing transition from state 1 to 2 only
-  if(nValues == 2){  hyperexponentialSumTransitionMatrix[1:2,3:4] <- transitionStateMatrixTile }
-  
-  # for the general case, 
-  if(nValues > 2){
+  if(nValues == 1){
     
-    hyperexponentialSumTransitionMatrix <- hyperexponentialSumTransitionMatrix +
-      # Create an off diagonal matrix and add the transition tiles in
-      kronecker({M <- Matrix(0, nrow = nValues, ncol = nValues); diag(M[,-1]) <- 1; M}, transitionStateMatrixTile) }
+    # If the number of values is 1, then we have a hyperexponeitial distribution and this transition matrix is suitable
+    hyperexponentialSumTransitionMatrix <- Matrix(c(-1,0,0,-fittedBetaShape), ncol = 2, nrow = 2)
+    
+  }else{
+    
+    hyperexponentialSumTransitionMatrix <- Matrix(0, ncol = 2*nValues, nrow = 2*nValues)
+    diag(hyperexponentialSumTransitionMatrix) <- rep(c(-1,-fittedBetaShape), times = nValues)
+    
+    diag(hyperexponentialSumTransitionMatrix[,-1]) <- c(rep(c(0,fittedBetaShape*uniformProportion), times = (nValues-1)),0)
+    diag(hyperexponentialSumTransitionMatrix[,-1:-2]) <- rep(c(uniformProportion,fittedBetaShape*(1-uniformProportion)), times = (nValues-1))
+    
+    # Edge case for nValues = 2: the diagonal fuction is weird when you  drop all but one column
+    if(nValues == 2){
+      hyperexponentialSumTransitionMatrix[1,4] <- (1-uniformProportion)
+    }else{
+      diag(hyperexponentialSumTransitionMatrix[,-1:-3]) <- c(rep(c((1-uniformProportion),0), times = (nValues-2)),(1-uniformProportion))  
+    }
+  }
   
   return(hyperexponentialSumTransitionMatrix)
 }
