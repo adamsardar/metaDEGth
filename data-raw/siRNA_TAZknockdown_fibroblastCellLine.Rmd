@@ -303,13 +303,16 @@ What's at the top of the list? [Stanniocalcin](https://en.wikipedia.org/wiki/Sta
 siTAZdt <- siTAZdiffex_HFL1_diffexDT
 
 siTAZ1_BetaUniformModel <- fitBetaUniformMixtureDistribution(siTAZdt$siTAZ1_pValue)
+siTAZ2_BetaUniformModel <- fitBetaUniformMixtureDistribution(siTAZdt$siTAZ2_pValue)
 
 noiseFractionUpperBound(siTAZ1_BetaUniformModel)
+noiseFractionUpperBound(siTAZ2_BetaUniformModel)
 
-plot(susceptibleCellLine_BetaUniformModel)
+plot(siTAZ1_BetaUniformModel)
+plot(siTAZ2_BetaUniformModel)
 
-siTAZdt[, betaUnifScore_FDR0.05 := betaUniformScore(siTAZ1_pValue, siTAZ1_BetaUniformModel, FDR = 0.05)]
-
+siTAZdt[, betaUnifScore1_FDR0.05 := betaUniformScore(siTAZ1_pValue, siTAZ2_BetaUniformModel, FDR = 0.05)]
+siTAZdt[, betaUnifScore2_FDR0.05 := betaUniformScore(siTAZ2_pValue, siTAZ2_BetaUniformModel, FDR = 0.05)]
 
 library(fgsea)
 
@@ -325,18 +328,39 @@ CGP_geneSets_DT <- map2_dfr(chemical_genetic_peturbations, names(chemical_geneti
 
 #####
 
-cgpSetsDT <- siTAZdt[ unique(cannonical_pathways_DT[, .(pathway = name, geneID = as.character(geneID))]), , on = "geneID", allow.cartesian=T][!is.na(siTAZ1_pValue),.(pValueSet = list(siTAZ1_pValue), geneSet = list(geneSymbol), scoreSum = sum(betaUnifScore_FDR0.05)), by = pathway]
+cannonicalSets_siTAZ1_DT <- siTAZdt[ unique(cannonical_pathways_DT[, .(pathway = name, geneID = as.character(geneID))]), , on = "geneID", allow.cartesian=T][!is.na(siTAZ1_pValue),.(pValueSet = list(siTAZ1_pValue), geneSet = list(geneSymbol), scoreSum = sum(betaUnifScore1_FDR0.05)), by = pathway]
 
-cgpSetsDT[, members := str_c(sort(geneSet[[1]]), collapse = ","), by = pathway]
+cannonicalSets_siTAZ2_DT <- siTAZdt[ unique(cannonical_pathways_DT[, .(pathway = name, geneID = as.character(geneID))]), , on = "geneID", allow.cartesian=T][!is.na(siTAZ2_pValue),.(pValueSet = list(siTAZ2_pValue), geneSet = list(geneSymbol), scoreSum = sum(betaUnifScore2_FDR0.05)), by = pathway]
 
-
-cgpSetsDT[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], erlotinibADRhcc827_betaUniformModel), by = members]
-cgpSetsDT[, fishersP := fishersPvalueSumTest(pValueSet[[1]]), by = pathway]
-
-cgpSetsDT[pathway %like% "BIOCARTA"][p.adjust(betaUniformMixtureP, "fdr") < 0.01] 
-cgpSetsDT[p.adjust(fishersP, "fdr") < 0.01]
+merge(cannonicalSets_siTAZ1_DT[,.(pathway, scoreSum)], cannonicalSets_siTAZ2_DT[,.(pathway, scoreSum)], by = "pathway") %>%
+  ggplot(aes(x=scoreSum.x, y=scoreSum.y)) +
+  geom_point()
 
 
 
+cannonicalSets_siTAZ1_DT[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], siTAZ1_BetaUniformModel), by = pathway]
+cannonicalSets_siTAZ1_DT[, fishersP := fishersPvalueSumTest(pValueSet[[1]]), by = pathway]
+
+cannonicalSets_siTAZ1_DT[p.adjust(betaUniformMixtureP) < 0.01, .(pathway)]
+
+
+
+cannonicalSets_siTAZ2_DT[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], siTAZ2_BetaUniformModel), by = pathway]
+cannonicalSets_siTAZ2_DT[, fishersP := fishersPvalueSumTest(pValueSet[[1]]), by = pathway]
+
+
+REACT_TAZ1 <- cannonicalSets_siTAZ1_DT[pathway %like% "REACT"]
+REACT_TAZ1[, betaQ := p.adjust(betaUniformMixtureP, "fdr")]
+REACT_TAZ2 <- cannonicalSets_siTAZ2_DT[pathway %like% "REACT"]
+REACT_TAZ2[, betaQ := p.adjust(betaUniformMixtureP, "fdr")]
+
+
+merge(REACT_TAZ1, REACT_TAZ2, by = "pathway") %>% 
+  ggplot(aes(x = -log(betaUniformMixtureP.x), y = -log(betaUniformMixtureP.y))) +
+  geom_point()
+
+merge(REACT_TAZ1, REACT_TAZ2, by = "pathway")[p.adjust(betaUniformMixtureP.x, "fdr") < 0.01 & p.adjust(betaUniformMixtureP.y , "fdr") < 0.01]
 
 ```
+
+Studying the Reactome pathways, it looks like we nicely capture a whole load of integrin, collagen, TAZ and the like pathways.
