@@ -40,7 +40,7 @@ test_that("Contrast Fisher and BetaUniformSum tests",{
 })
 
 
-test_that("Inspect transition rate matrix", {
+test_that("Inspect transition rate matrix - should have known properties", {
   
   nVal <- 10
 
@@ -67,6 +67,54 @@ test_that("Inspect transition rate matrix", {
   expect_true(all(transitionMatrixCopy >= 0 ), label = "All off-diagonal entries are positive semi-definite")
 })
 
+
+# An older but much slower version of transition matrix generator. Used to test against
+constructHyperexponentialSumTransitionMatrixReference <- function(nValues, uniformProportion, fittedBetaShape){
+  
+  recurrentStateMatrixTile <- Matrix(c(-1,0,0,-fittedBetaShape), ncol = 2, nrow = 2)
+  transitionStateMatrixTile <- Matrix(c(uniformProportion, uniformProportion*fittedBetaShape,
+                                        (1-uniformProportion),(1-uniformProportion)*fittedBetaShape), nrow = 2, ncol = 2)
+  
+  hyperexponentialSumTransitionMatrix <- kronecker(Matrix::diag(nrow = nValues, ncol = nValues), recurrentStateMatrixTile)
+  
+  # If the number of values is 1, then we have a hyperexponeitial distribution and this transition matrix is suitable
+  
+  # For nValues = 2, we can just insert the tile describing transition from state 1 to 2 only
+  if(nValues == 2){  hyperexponentialSumTransitionMatrix[1:2,3:4] <- transitionStateMatrixTile }
+  
+  # for the general case, 
+  if(nValues > 2){
+    
+    hyperexponentialSumTransitionMatrix <- hyperexponentialSumTransitionMatrix +
+      # Create an off diagonal matrix and add the transition tiles in
+      kronecker({M <- Matrix(0, nrow = nValues, ncol = nValues); diag(M[,-1]) <- 1; M}, transitionStateMatrixTile) }
+  
+  return(hyperexponentialSumTransitionMatrix)
+}
+
+test_that("Contrast transition rate matrix against an alternative implemetnation", {
+  
+  nVal <- 1
+  
+  # 50 runs because this transition matrix is essential to be correct!
+  for(i in 1:50){
+  
+    fakeShape <- runif(1, 0.1, 0.8)
+    fakeMixture <- runif(1, 0.1, 0.8)
+    
+    mod <- constructHyperexponentialSumTransitionMatrix(nVal, fakeMixture, fakeShape)
+    ref <- constructHyperexponentialSumTransitionMatrixReference(nVal, fakeMixture, fakeShape)
+    
+    expect_equivalent(mod, ref)
+    
+    #No zero counts
+    # nVal =1 and nVal=2 are odd edge cases that *must* be checked
+    if(i == 1){nVal <- 2}else{nVal <- rpois(1,10) + 1}
+  }
+  
+})
+
+
 test_that("Compare accuracy against known phase-type distribution P-value (actuar package)",{
   
   nVal <- 5
@@ -90,3 +138,4 @@ test_that("Compare accuracy against known phase-type distribution P-value (actua
     tolerance = 1E-5)
   
 })
+

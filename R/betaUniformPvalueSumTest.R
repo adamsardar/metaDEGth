@@ -64,26 +64,25 @@ setMethod("betaUniformPvalueSumTest",
 #' @import Matrix
 constructHyperexponentialSumTransitionMatrix <- function(nValues, uniformProportion, fittedBetaShape){
 
-  # For nValues = 2, we can just insert the tile describing transition from state 1 to 2 only
+  # If the number of values is 1, then we have a hyperexponeitial distribution and this transition matrix is suitable
   if(nValues == 1){
     
-    # If the number of values is 1, then we have a hyperexponeitial distribution and this transition matrix is suitable
-    hyperexponentialSumTransitionMatrix <- Matrix(c(-1,0,0,-fittedBetaShape), ncol = 2, nrow = 2)
+      hyperexponentialSumTransitionMatrix <- Matrix(c(-1,0,0,-fittedBetaShape), ncol = 2, nrow = 2)
     
   }else{
     
-    hyperexponentialSumTransitionMatrix <- Matrix(0, ncol = 2*nValues, nrow = 2*nValues)
-    diag(hyperexponentialSumTransitionMatrix) <- rep(c(-1,-fittedBetaShape), times = nValues)
-    
-    diag(hyperexponentialSumTransitionMatrix[,-1]) <- c(rep(c(0,fittedBetaShape*uniformProportion), times = (nValues-1)),0)
-    diag(hyperexponentialSumTransitionMatrix[,-1:-2]) <- rep(c(uniformProportion,fittedBetaShape*(1-uniformProportion)), times = (nValues-1))
-    
-    # Edge case for nValues = 2: the diagonal fuction is weird when you  drop all but one column
-    if(nValues == 2){
-      hyperexponentialSumTransitionMatrix[1,4] <- (1-uniformProportion)
-    }else{
-      diag(hyperexponentialSumTransitionMatrix[,-1:-3]) <- c(rep(c((1-uniformProportion),0), times = (nValues-2)),(1-uniformProportion))  
-    }
+    # Populte the diagonal, diagonal+1, diagonal+2 and diagonal+3 with values
+    # Complicated, but it is over an order of magnitude faster than previous implementation (present in test-BetaUniformPvalueSum.R)
+    hyperexponentialSumTransitionMatrix <- 
+      sparseMatrix(i = c(seq(1,2*nValues), seq(1,2*nValues-1), seq(1,2*nValues-2), seq(1,2*nValues-3)) , 
+                   j = c(seq(1,2*nValues), seq(2,2*nValues), seq(3,2*nValues), seq(4,2*nValues)) ,
+                   x = c(rep(c(-1,-fittedBetaShape), times = nValues), #diagonal
+                         c(rep(c(0,fittedBetaShape*uniformProportion), times = (nValues-1)),0), # diagonal+1
+                         rep(c(uniformProportion,fittedBetaShape*(1-uniformProportion)), times = (nValues-1)), # diagonal+2
+                         c(rep(c((1-uniformProportion),0), times = (nValues-2)),(1-uniformProportion))  ), # diagonal+3
+                   dims = c(2*nValues,2*nValues))
+    #TODO - consider smarter indexing and not populating 0 entries (since they are implcit). Likely only marginal gains though and maybe more obfuscated
+    #TODO - consider using check = FALSE. 2x speed improvement ...
   }
   
   return(hyperexponentialSumTransitionMatrix)
