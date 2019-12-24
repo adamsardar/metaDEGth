@@ -51,6 +51,7 @@ setMethod("betaUniformPvalueSumTest",
             
             # The inverse CDF of the phase-type distribution is sum( alpha * exp(x*S) ), where S is the transition matrix and alpha the initial probability
             phaseRateP <- sum(initialProb %*% Matrix::expm(testStatistic*transitionMatrix))
+            # TODO the transition matrix is upper triangualr, so there should be a considerably more efficient way to compute this!
           
             return( new("Pvalue", mkScalar(phaseRateP)) )
           })
