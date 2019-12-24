@@ -45,22 +45,20 @@ Let's try it on erlotinib
 
 ```{r}
 
-erlotinib_aggregatedExpress <- erlotinib_adrHCC827_diffexDT[,.SD[ER3_pValue == min(ER3_pValue)][1], by = geneID]
-
-susceptibleCellLine_BetaUniformModel <- fitBetaUniformMixtureDistribution(erlotinib_aggregatedExpress$ER3_pValue)
+susceptibleCellLine_BetaUniformModel <- fitBetaUniformMixtureDistribution(erlotinib_adrHCC827_diffexDT$ER3_pValue)
 
 noiseFractionUpperBound(susceptibleCellLine_BetaUniformModel)
 
-plot(susceptibleCellLine_BetaUniformModel, outputFormula = FALSE, outputParameters = FALSE)
+plot(susceptibleCellLine_BetaUniformModel)
 
-erlotinib_aggregatedExpress[, betaUnifScore_FDR0.05 := betaUniformScore(ER3_pValue, susceptibleCellLine_BetaUniformModel, FDR = 0.05)]
+erlotinib_adrHCC827_diffexDT[, betaUnifScore_FDR0.05 := betaUniformScore(ER3_pValue, susceptibleCellLine_BetaUniformModel, FDR = 0.05)]
 
 
 
 #Group by GeneIDs
 hsPathBankGeneIDsets_DT <- hsPathBankProteinSets_DT[!is.na(geneID) & pathwayType != "Metabolic", .(geneID = as.integer(unique(unlist( strsplit(geneID, "; "))))), by = .(pathway,pathwayType)]
 
-pathwayPvals <- erlotinib_aggregatedExpress %>% 
+pathwayPvals <- erlotinib_adrHCC827_diffexDT %>% 
   .[hsPathBankGeneIDsets_DT,,on = "geneID", allow.cartesian=TRUE] %>%
   .[!is.na(ER3_pValue),
     .(pValueSet = list(ER3_pValue), members = list(geneSymbol), scoreSum = sum(betaUnifScore_FDR0.05, na.rm = T)), by = .(pathway,pathwayType)]
@@ -68,6 +66,7 @@ pathwayPvals <- erlotinib_aggregatedExpress %>%
 pathwayPvals[, geneSet := str_c(sort(members[[1]]), collapse = ","), by = pathway]
 
 pathwayPvals[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], susceptibleCellLine_BetaUniformModel),  by = geneSet]
+
 pathwayPvals[, fishersP := fishersPvalueSumTest(pValueSet[[1]]),  by = geneSet]
 
 pathwayPvals[!duplicated(geneSet), betaUniformMixtureQ := p.adjust(betaUniformMixtureP, "fdr")]
@@ -76,9 +75,68 @@ pathwayPvals[,betaUniformMixtureQ := na.omit(betaUniformMixtureQ) , by = geneSet
 pathwayPvals[!duplicated(geneSet), fishersQ := p.adjust(fishersP, "fdr")]
 pathwayPvals[,fishersQ := na.omit(fishersQ) , by = geneSet]
 
-pathwayPvals[betaUniformMixtureQ < 0.01][pathwayType == "Drug Action"][order(-scoreSum)]
+pathwayPvals[betaUniformMixtureQ < 0.05][pathwayType == "Drug Action"][order(-scoreSum)]
 
 pathwayPvals[fishersQ < 0.01][pathwayType == "Drug Action"][order(-scoreSum)]
 
 ```
+
+
+```{r}
+
+library(fgsea)
+
+hallmark_pathways <- gmtPathways("/mnt/c/broad_genesets/h.all.v7.0.entrez.gmt")
+hallmark_pathways_DT <- map2_dfr(hallmark_pathways, names(hallmark_pathways), ~ data.table(name = .y, geneID = .x, type = "hallmark_pathways"))
+
+
+cannonical_pathways <- gmtPathways("/mnt/c/broad_genesets/c2.cp.v7.0.entrez.gmt")
+cannonical_pathways_DT <- map2_dfr(cannonical_pathways, names(cannonical_pathways), ~ data.table(name = .y, geneID = .x, type = "cannonical_pathways"))
+
+chemical_genetic_peturbations <- gmtPathways("/mnt/c/broad_genesets/c2.cgp.v7.0.entrez.gmt")
+CGP_geneSets_DT <- map2_dfr(chemical_genetic_peturbations, names(chemical_genetic_peturbations), ~ data.table(name = .y, geneID = .x, type = "chemical_genetic_peturbations"))
+
+
+
+erlotinibADRhcc827_betaUniformModel <- fitBetaUniformMixtureDistribution(erlotinib_adrHCC827_diffexDT$HCC827_pValue, nStarts = 20)
+
+erlotinib_adrHCC827_diffexDT[, betaUnifScore_FDR0.05 := betaUniformScore(HCC827_pValue, erlotinibADRhcc827_betaUniformModel, FDR = 0.05)]
+
+noiseFractionUpperBound(erlotinibADRhcc827_betaUniformModel)
+
+###
+
+
+cgpSetsDT <- erlotinib_adrHCC827_diffexDT[ unique(cannonical_pathways_DT[, .(pathway = name, geneID = as.numeric(geneID))]), , on = "geneID", allow.cartesian=T][!is.na(HCC827_pValue),.(pValueSet = list(HCC827_pValue), geneSet = list(geneSymbol), scoreSum = sum(betaUnifScore_FDR0.05)), by = pathway]
+
+cgpSetsDT[, members := str_c(sort(geneSet[[1]]), collapse = ","), by = pathway]
+
+
+cgpSetsDT[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], erlotinibADRhcc827_betaUniformModel), by = members]
+cgpSetsDT[, fishersP := fishersPvalueSumTest(pValueSet[[1]]), by = pathway]
+
+cgpSetsDT[pathway %like% "BIOCARTA"][p.adjust(betaUniformMixtureP, "fdr") < 0.01] 
+cgpSetsDT[p.adjust(fishersP, "fdr") < 0.01]
+
+
+####
+
+
+cgpSetsDT <- WZ4002_geneIDexpress[ unique(cannonical_pathways_DT[, .(pathway = name, geneID)]), , on = "geneID"][!is.na(H1975_pValue),.(pValueSet = list(H1975_pValue), geneSet = list(geneSymbol), scoreSum = sum(betaUnifScore_FDR0.05)), by = pathway]
+
+cgpSetsDT[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], WZ4002_betaUniformModel), by = pathway]
+cgpSetsDT[, fishersP := fishersPvalueSumTest(pValueSet[[1]]), by = pathway]
+
+
+cgpSetsDT[p.adjust(betaUniformMixtureP, "fdr") < 0.01] 
+cgpSetsDT[p.adjust(fishersP, "fdr") < 0.01]
+
+cgpSetsDT[scoreSum > 0 & p.adjust(betaUniformMixtureP, "fdr") < 0.01][pathway %like% "KEGG"][9, pValueSet[[1]]]
+
+pVals <- cgpSetsDT[scoreSum > 0 & p.adjust(betaUniformMixtureP, "fdr") < 0.01][pathway %like% "KEGG"][9, pValueSet[[1]]]
+
+```
+
+
+
 

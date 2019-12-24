@@ -191,7 +191,7 @@ TTRUST_TF_pvalues <- koATF3_geneIDExpress[ unique(TTRUST_TF2targets_DT[!is.na(ge
 TTRUST_TF_pvalues[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], ATF3knockout_betaUniformModel), by = TF]
 TTRUST_TF_pvalues[, fishersP := fishersPvalueSumTest(pValueSet[[1]]), by = TF]
 
-TTRUST_TF_pvalues[p.adjust(betaUniformMixtureP) < 0.05] # No significant gene sets
+TTRUST_TF_pvalues[p.adjust(betaUniformMixtureP, "fdr") < 0.01][order(betaUniformMixtureP)] # No significant gene sets
 TTRUST_TF_pvalues[p.adjust(fishersP) < 0.05] # Quite a few ... too many for so little signal?
 
 TTRUST_TF_pvalues[scoreSum > 0]
@@ -205,6 +205,8 @@ labs(title = "Plot to show how much more conservative beta-uniform P-Values are 
 subtitle = "ATF3 knockout study (which has very little signal).\nBonferroni (conservative) multiple hypothesuis correction cut-off shown.") +
 geom_vline(xintercept = -log(0.05/800), linetype = "dashed", colour = "red") +
 geom_hline(yintercept = -log(0.05/800), linetype = "dashed", colour = "red")
+
+
 TTRUST_TF_pvalues <- koATF3_diffexDT[TTRUST_TF2targets_DT[!is.na(geneID), .(TF, geneID)], , on = "geneID"][,.(pValueSet = list(P.Value), geneSet = list(geneSymbol)), by = TF]
 # Perform meta-analysis using the TTRUST TF->target sets
 TTRUST_TF_pvalues <- koATF3_diffexDT[TTRUST_TF2targets_DT[!is.na(geneID), .(TF, geneID)], , on = "geneID"][,.(pValueSet = list(P.Value), geneSet = list(geneSymbol)), by = TF]

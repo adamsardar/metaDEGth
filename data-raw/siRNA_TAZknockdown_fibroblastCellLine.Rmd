@@ -295,3 +295,48 @@ siTAZdiffex_HFL1_diffexDT[ p.adjust(siTAZ1_pValue,"fdr") < 1E-3][order(-siTAZ1_l
 ```
 
 What's at the top of the list? [Stanniocalcin](https://en.wikipedia.org/wiki/Stanniocalcin), which is a glycoprotein that controls calcium and phosphate - need I remind you that this study was within [fibrosis](https://www.nature.com/articles/srep18117).
+
+# Pathway enrichment
+
+```{r}
+
+siTAZdt <- siTAZdiffex_HFL1_diffexDT
+
+siTAZ1_BetaUniformModel <- fitBetaUniformMixtureDistribution(siTAZdt$siTAZ1_pValue)
+
+noiseFractionUpperBound(siTAZ1_BetaUniformModel)
+
+plot(susceptibleCellLine_BetaUniformModel)
+
+siTAZdt[, betaUnifScore_FDR0.05 := betaUniformScore(siTAZ1_pValue, siTAZ1_BetaUniformModel, FDR = 0.05)]
+
+
+library(fgsea)
+
+hallmark_pathways <- gmtPathways("/mnt/c/broad_genesets/h.all.v7.0.entrez.gmt")
+hallmark_pathways_DT <- map2_dfr(hallmark_pathways, names(hallmark_pathways), ~ data.table(name = .y, geneID = .x))
+
+
+cannonical_pathways <- gmtPathways("/mnt/c/broad_genesets/c2.cp.v7.0.entrez.gmt")
+cannonical_pathways_DT <- map2_dfr(cannonical_pathways, names(cannonical_pathways), ~ data.table(name = .y, geneID = .x))
+
+chemical_genetic_peturbations <- gmtPathways("/mnt/c/broad_genesets/c2.cgp.v7.0.entrez.gmt")
+CGP_geneSets_DT <- map2_dfr(chemical_genetic_peturbations, names(chemical_genetic_peturbations), ~ data.table(name = .y, geneID = .x))
+
+#####
+
+cgpSetsDT <- siTAZdt[ unique(cannonical_pathways_DT[, .(pathway = name, geneID = as.character(geneID))]), , on = "geneID", allow.cartesian=T][!is.na(siTAZ1_pValue),.(pValueSet = list(siTAZ1_pValue), geneSet = list(geneSymbol), scoreSum = sum(betaUnifScore_FDR0.05)), by = pathway]
+
+cgpSetsDT[, members := str_c(sort(geneSet[[1]]), collapse = ","), by = pathway]
+
+
+cgpSetsDT[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], erlotinibADRhcc827_betaUniformModel), by = members]
+cgpSetsDT[, fishersP := fishersPvalueSumTest(pValueSet[[1]]), by = pathway]
+
+cgpSetsDT[pathway %like% "BIOCARTA"][p.adjust(betaUniformMixtureP, "fdr") < 0.01] 
+cgpSetsDT[p.adjust(fishersP, "fdr") < 0.01]
+
+
+
+
+```

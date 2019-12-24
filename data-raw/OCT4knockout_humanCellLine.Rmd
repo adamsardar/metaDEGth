@@ -207,7 +207,7 @@ OCTcrisprByGeneID <- cas9OCT4_hsZygote_diffexDT[!is.na(geneID), .(geneID = as.in
 
 cas9OCT4_BUMod <- fitBetaUniformMixtureDistribution(OCTcrisprByGeneID$koOCT4_pValue)
 
-plot.BetaUniformModel(cas9OCT4_BUMod, outputFormula = F, outputParameters=F)
+plot.BetaUniformModel(cas9OCT4_BUMod, outputFormula = FALSE, outputParameters=FALSE)
 
 OCTcrisprByGeneID[, betaUnifScore_FDR0.05 := betaUniformScore(koOCT4_pValue, cas9OCT4_BUMod)]
 
@@ -220,6 +220,11 @@ noiseFractionUpperBound(cas9OCT4_BUMod)
 
 TF_pvals <- OCTcrisprByGeneID[  unique(TTRUST_TF2targets_DT[!is.na(geneID), .(TF, geneID)]), , on = "geneID"] %>% 
                     .[!is.na(koOCT4_pValue),.(pValueSet = list(koOCT4_pValue), members = list(geneID), sumScore = sum(betaUnifScore_FDR0.05, na.rm=T)), by = TF]
+
+for(i in 1:nrow(TF_pvals)){
+  
+ betaUniformPvalueSumTest( TF_pvals[1,  pValueSet[[1]]], cas9OCT4_BUMod)
+}
 
 TF_pvals[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], cas9OCT4_BUMod), by = TF]
 TF_pvals[, fishersP := fishersPvalueSumTest(pValueSet[[1]]), by = TF]
@@ -235,6 +240,12 @@ TF_pvals[, fishersQ := p.adjust(fishersP, "fdr")]
 TF_pvals[order(betaUniformMixtureQ)]
 
 TF_pvals[TF == "POU5F1"]
+
+TF_pvals[betaUniformMixtureQ < 0.01]
+
+TF_pvals[order(betaUniformMixtureQ)]
+
+TF_pvals[fishersQ < 0.01]
 ```
 
 This is another focused dataset where TTRUST fails to pick out signal (or it's metaDEGth - also possible). I notice that NNANOG, a well known POU5F1 target is in there as diffexed ...
@@ -279,8 +290,8 @@ regCirc_pvalues <- cas9OCT4_geneSymExpress[ unique(FANTOM5_hs_regcirc[V2 > 0.3, 
 regCirc_pvalues[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], OCT4knockout_betaUniformModel), by = TF]
 regCirc_pvalues[, fishersP := fishersPvalueSumTest(pValueSet[[1]]), by = TF]
 
-regCirc_pvalues[p.adjust(betaUniformMixtureP) < 0.05] # No significant gene sets
-regCirc_pvalues[p.adjust(fishersP) < 0.05] # Quite a few ... too many for so little signal?
+regCirc_pvalues[p.adjust(betaUniformMixtureP) < 0.01] # No significant gene sets
+regCirc_pvalues[p.adjust(fishersP) < 0.01] # Quite a few ... too many for so little signal?
 
 TTRUST_TF_pvalues[scoreSum > 0]
 ```
