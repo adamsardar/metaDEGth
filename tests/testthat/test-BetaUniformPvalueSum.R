@@ -30,7 +30,7 @@ test_that("Contrast Fisher and BetaUniformSum tests",{
   
   for(i in 1:10){
 
-    fakePvalSet <- sample( seq(0.01,0.1,0.01), 10)
+    fakeSignificantSet <- sample( seq(0.01,0.1,0.01), 10)
     
     expect_lt(fishersPvalueSumTest( new("Pvalues", fakeSignificantSet)),
               betaUniformPvalueSumTest( new("Pvalues", fakeSignificantSet), fakeBetaUniformObj),
