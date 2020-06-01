@@ -30,8 +30,9 @@ Depends:
 Suggests: 
     actuar (>= 2.3),
     BioNet (>= 1.4),
-    testthat (>= 2.0)
-RoxygenNote: 7.0.2
+    testthat (>= 2.0),
+    expoRkit (>= 0.9)
+RoxygenNote: 7.1.0
 Collate: 
     'BetaUniformModel_S4Class.R'
     'Pvalues_S4Class.R'
@@ -45,5 +46,6 @@ Collate:
     'fitBetaUniformModel.R'
     'koATF3_HCT116_diffexDT.R'
     'metaDEGth-package.R'
+    'plot.BetaUniformModel.R'
     'siTAZdiffex_HFL1_diffexDT.R'
     'validators.R'
