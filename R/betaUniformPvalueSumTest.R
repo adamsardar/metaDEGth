@@ -56,7 +56,7 @@ setMethod("betaUniformPvalueSumTest",
             if("expoRkit" %in% .packages(all.available = TRUE) & getOption("metaDEGth_use_expoRkit", default = TRUE)){
               
               phaseRateP <- as.numeric( initialProb %*% expoRkit::expv(testStatistic*transitionMatrix, v = rep(1,2*nValues) ) )
-              if(abs(phaseRateP) <= 1E-18){ phaseRateP <- 1E-18 } #Catch numerical underflow
+              if(abs(phaseRateP) <= 1E-18){ phaseRateP <- sum(initialProb %*% Matrix::expm(testStatistic*transitionMatrix)) } # The fortran routine can sometimes become a little imprecise with very small floats
             }else{
               
               if(!messagedUserAboutExpokit){
