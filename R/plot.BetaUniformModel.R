@@ -64,9 +64,9 @@ plot.BetaUniformModel <- function(x, showFit = TRUE, outputParameters = TRUE, ou
 
   LLsurface_plot <- ggplot(paramSpace[LLH > 0], aes(a, lambda)) +
     geom_tile(aes(fill=LLH), colour = "grey50") +
-    stat_contour(aes(z=LLH), colour = "lightgrey") +
+    stat_contour(aes(z=LLH), colour = "darkgrey") +
     scale_fill_gradientn(colours = terrain.colors(20)) +
-    geom_point(x = x@a, y = x@lambda, size = 3, colour = "lightgrey") +
+    geom_point(x = x@a, y = x@lambda, size = 3, colour = "darkgrey") +
     labs(title = "Likelihood surface and ML parameter estimate",
          subtitle = studyName,
          x = "a", y = "lambda") +
