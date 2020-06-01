@@ -1,0 +1,159 @@
+---
+title: "Including BioPlanet"
+author: "Adam Sardar"
+date: "26/05/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+The bioplanet resources looks like a fantastic source of curated gene sets, culling for redundancy across sources. We shall
+include them in the package:
+
+```{r}
+
+library(data.table)
+library(stringr)
+
+```
+
+pathways downloaded directly from [BioPlanet](https://tripod.nih.gov/bioplanet/)
+
+```{r}
+
+pathwayMembershipDT <- fread("C:/Users/ASardar/Downloads/pathway.csv")
+
+pathwayStatusDT <- fread("C:/Users/ASardar/Downloads/pathway-category.csv")
+
+pathwayMembershipDT[ pathwayStatusDT, CATEGORY_NAME := CATEGORY_NAME, on = .(PATHWAY_ID == PATHWAY_ID)]
+
+
+bioplanetPathwaysDT <- pathwayMembershipDT[,.(BioPlanetName = PATHWAY_NAME,
+                                              BioPlanetID = PATHWAY_ID,
+                                              geneID = GENE_ID,
+                                              geneSymbol = GENE_SYMBOL,
+                                              category = CATEGORY_NAME)]
+
+
+save(bioplanetPathwaysDT, file = "./data/bioplanetPathwaysDT.RData", compress = "xz")
+
+```
+
+
+Let's try it out on the data
+
+
+
+Let's try it on erlotinib
+
+```{r}
+
+
+erlotinib_geneIDexpress <- erlotinib_adrHCC827_diffexDT[!is.na(geneID), .SD[ER3_pValue == min(ER3_pValue, na.rm = T)][1] , by = geneID]
+
+
+
+susceptibleCellLine_BetaUniformModel <- fitBetaUniformMixtureDistribution(erlotinib_geneIDexpress$ER3_pValue)
+
+noiseFractionUpperBound(susceptibleCellLine_BetaUniformModel)
+
+plot(susceptibleCellLine_BetaUniformModel)
+
+erlotinib_geneIDexpress[, betaUnifScore_FDR0.05 := betaUniformScore(ER3_pValue, susceptibleCellLine_BetaUniformModel, FDR = 0.05)]
+
+
+
+#Group by GeneIDs
+pathwayPvals <- erlotinib_geneIDexpress %>% 
+  .[bioplanetPathwaysDT,,on = 'geneID', allow.cartesian=TRUE] %>%
+  .[, .SD[!duplicated(geneID)], by = BioPlanetName] %>%
+  .[!is.na(ER3_pValue),
+    .(pValueSet = list(ER3_pValue), members = list(geneSymbol), scoreSum = sum(betaUnifScore_FDR0.05, na.rm = T)), by = .(BioPlanetName,BioPlanetID)]
+
+
+pathwayPvals[, geneSet := str_c(sort(members[[1]]), collapse = ","), by = BioPlanetName] #Ensure that we don't test a set of genes more than once and inflate the number of tests conducted
+pathwayPvals[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], susceptibleCellLine_BetaUniformModel),  by = geneSet]
+
+
+
+
+pathwayPvals[, fishersP := fishersPvalueSumTest(pValueSet[[1]]),  by = geneSet]
+
+pathwayPvals[!duplicated(geneSet), betaUniformMixtureQ := p.adjust(betaUniformMixtureP, "fdr")]
+pathwayPvals[,betaUniformMixtureQ := na.omit(betaUniformMixtureQ) , by = geneSet]
+
+pathwayPvals[!duplicated(geneSet), fishersQ := p.adjust(fishersP, "fdr")]
+pathwayPvals[,fishersQ := na.omit(fishersQ) , by = geneSet]
+
+
+pathwayPvals[, nValues := length(pValueSet[[1]]), by = BioPlanetID]
+
+pathwayPvals[betaUniformMixtureQ < 1E-3 & nValues <= 20][order(-scoreSum)]
+
+pathwayPvals[fishersQ < 0.01][order(-scoreSum)]
+
+
+erlotinibSignif <- pathwayPvals[betaUniformMixtureQ < 1E-2 & nValues <= 30][order(-scoreSum)]
+```
+
+I don't think that this is too bad!
+
+## siTAZ
+
+The siTAZ (WWTR!) TF knockdown experiment is a clean pertubation of a cell line expression. If we can't see anything in the gene expression signature, we're sunk.
+
+
+```{r}
+
+fbTAZ1 <- fitBetaUniformMixtureDistribution(siTAZdiffex_HFL1_diffexDT$siTAZ1_pValue)
+fbTAZ2 <- fitBetaUniformMixtureDistribution(siTAZdiffex_HFL1_diffexDT$siTAZ2_pValue)
+
+plot(fbTAZ1)
+plot(fbTAZ2)
+
+
+siTAZdiffex_HFL1_diffexDT[, betaUnifScore1_FDR0.05 := betaUniformScore(siTAZ1_pValue, fbTAZ1, FDR = 0.05)]
+siTAZdiffex_HFL1_diffexDT[, betaUnifScore2_FDR0.05 := betaUniformScore(siTAZ2_pValue, fbTAZ2, FDR = 0.05)]
+
+
+siTAZdiffex_HFL1_diffexDT[, geneID := as.integer(geneID)]
+
+
+#Group by GeneIDs
+pathwayPvals <- siTAZdiffex_HFL1_diffexDT %>% 
+    .[bioplanetPathwaysDT,,on = "geneID", allow.cartesian=TRUE] %>% 
+    .[, .SD[!duplicated(geneID)], by = BioPlanetName] %>%
+    .[!is.na(siTAZ1_pValue) & !is.na(siTAZ2_pValue),
+    .(pValueSet1 = list(siTAZ1_pValue), pValueSet2 = list(siTAZ2_pValue),
+      members = list(geneSymbol),
+      scoreSum1 = sum(betaUnifScore1_FDR0.05, na.rm = T),
+      scoreSum2 = sum(betaUnifScore2_FDR0.05, na.rm = T)),
+    by = .(BioPlanetName,BioPlanetID)]
+
+pathwayPvals[,size := sapply(members, length)]
+
+pathwayPvals[, geneSet := str_c(sort(members[[1]]), collapse = ","), by = BioPlanetName] #Ensure that we don't test a set of genes more than once and inflate the number of tests conducted
+
+
+library(profvis)
+
+profvis({
+  pathwayPvals[, betaUniformMixtureP1 := betaUniformPvalueSumTest(pValueSet1[[1]], fbTAZ1),
+               by = geneSet] })
+
+
+pathwayPvals[, betaUniformMixtureP2 := betaUniformPvalueSumTest(pValueSet2[[1]], fbTAZ1),
+             by = geneSet]
+
+pathwayPvals[, betaUniformMixtureQ1 := p.adjust(betaUniformMixtureP1, method = "fdr")]
+pathwayPvals[, betaUniformMixtureQ2 := p.adjust(betaUniformMixtureP2, method = "fdr")]
+
+pathwayPvals[betaUniformMixtureQ1 < 0.01 & betaUniformMixtureQ2 <= 0.01 & size < 20]
+
+
+
+siTAZsignif <- pathwayPvals[betaUniformMixtureQ1 < 0.01 & betaUniformMixtureQ2 <= 0.01 & size < 30][order(-scoreSum1)]
+
+merge(siTAZsignif, erlotinibSignif, by = "BioPlanetName")
+
+```
