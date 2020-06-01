@@ -121,6 +121,19 @@ save(WZ4002_adrH1975_diffexDT, file = "./data/WZ4002_adrH1975_diffexDT.RData", c
 
 
 
+Study using BioPlanet
+
+# Should see MAPK1 and/or ERK. EGFR too.
+
+```{r}
+
+WZ4002_adrH1975_diffexDT[,qplot(H1975_pValue)]
+
+
+tkiBUM <- fitBetaUniformMixtureDistribution(WZ4002_adrH1975_diffexDT$H1975_pValue)
+
+```
+
 
 ```{r}
 
