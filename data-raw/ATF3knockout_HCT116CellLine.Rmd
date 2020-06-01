@@ -227,15 +227,21 @@ geom_hline(yintercept = -log(0.05/800), linetype = "dashed", colour = "red")
 
 ```{r}
 
-suppressWarnings(ATF3knockoutBUM <- fitBetaUniformMixtureDistribution(GSE74362_diffexDT$P.Value, nStarts = 10))
 
-# 70+% of calls made at FDR of 0.05 are false positives!!
+ACT3ko_geneIDexpress <- koATF3_HCT116_diffexDT[!is.na(geneID), .SD[koATF3_pValue == min(koATF3_pValue, na.rm = T)][1] , by = geneID]
+
+
+ATF3knockoutBUM <- fitBetaUniformMixtureDistribution(ACT3ko_geneIDexpress$koATF3_pValue)
+
+plot(ATF3knockoutBUM)
+
+# 55+% of calls made at FDR of 0.05 are false positives!!
 falsePositiveFraction(ATF3knockoutBUM, pValueThreshold = 0.05)/(falsePositiveFraction( ATF3knockoutBUM, pValueThreshold = 0.05) + truePositiveFraction(ATF3knockoutBUM, pValueThreshold = 0.05))
 
 
-TF_pvals <- GSE74362_diffexDT[TTRUST_TF2targets_DT %>% 
+TF_pvals <- ACT3ko_geneIDexpress[TTRUST_TF2targets_DT %>% 
                     .[!is.na(geneID), .(TF, geneID)], , on = "geneID"] %>% 
-                    .[,.(geneSets = list(P.Value)), by = TF]
+                    .[,.(geneSets = list(koATF3_pValue)), by = TF]
 
 TF_pvals_list <- TF_pvals[, geneSets]
 names(TF_pvals_list) <- TF_pvals[, TF]
@@ -243,14 +249,67 @@ names(TF_pvals_list) <- TF_pvals[, TF]
 betaUnifPs <- sapply(TF_pvals_list, betaUniformPvalueSumTest, betaUniformFit = ATF3knockoutBUM)
 fisherPs <- sapply(TF_pvals_list, fishersPvalueSumTest)
 
-summaryDT <- data.table(TF = names(resPs),
-                        metaDEGthP = resPs,
+summaryDT <- data.table(TF = names(TF_pvals_list),
+                        metaDEGthP = betaUnifPs,
                         fiserP = fisherPs)
 
 summaryDT[, metaDEGthQ := p.adjust(metaDEGthP, "fdr")]
 summaryDT[, fisherQ := p.adjust(fiserP, "fdr")]
 
 summaryDT[order(metaDEGthQ)]
+
+
+summaryDT[metaDEGthQ <= 1E-3]
+
+
+
+summaryDT[ACT3ko_geneIDexpress, geneID := geneID, on = .(TF == geneSymbol)]
+
+ACT3ko_geneIDexpress
+
+TTRUST_TF2targets_DT[TF == "ATF3"] %>%
+  merge(summaryDT, by = "geneID") %>% 
+  .[!is.na(geneID)] %>%
+  mutate(pQ = -log10(metaDEGthQ)) %>%
+  ggplot() + geom_histogram(aes(x = pQ))
+
+
 ```
 
+It's good that it recovers signal in p53. But this is far from a comprehensive test ...
+
+
+What about with BioPlanet
+
+```{r}
+
+
+ACT3ko_geneIDexpress <- koATF3_HCT116_diffexDT[!is.na(geneID), .SD[koATF3_pValue == min(koATF3_pValue, na.rm = T)][1] , by = geneID]
+
+
+BioPlanet_pvals <- ACT3ko_geneIDexpress[bioplanetPathwaysDT %>% 
+                      .[!is.na(geneID), .(BioPlanetName, geneID)], , on = "geneID"] %>% 
+                      .[,.(geneSets = list(koATF3_pValue)), by = BioPlanetName]
+
+BP_pvals_list <- BioPlanet_pvals[, geneSets]
+names(BP_pvals_list) <- BioPlanet_pvals[, BioPlanetName]
+
+betaUnifPs <- sapply(BP_pvals_list, betaUniformPvalueSumTest, betaUniformFit = ATF3knockoutBUM)
+fisherPs <- sapply(BP_pvals_list, fishersPvalueSumTest)
+
+
+summaryBP_DT <- data.table(TF = names(BP_pvals_list),
+                        metaDEGthP = betaUnifPs,
+                        fiserP = fisherPs)
+
+summaryBP_DT[, metaDEGthQ := p.adjust(metaDEGthP, "fdr")]
+summaryBP_DT[, fisherQ := p.adjust(fiserP, "fdr")]
+
+summaryBP_DT[order(metaDEGthQ)]
+
+ summaryBP_DT[order(metaDEGthQ)][metaDEGthQ <= 0.01] %>% head
+
+```
+
+Hmmm. Still tricky to see the precise signal.
 
