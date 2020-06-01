@@ -1,4 +1,6 @@
-#' A meta-analysis P-value summarising a set of hy
+messagedUserAboutExpokit <- FALSE
+
+#' A meta-analysis P-value summarising a set of hypotheses
 #' 
 #' A variant of Fisher's method for P-value aggregation, but with a parametrically derived null-hypothesis that reflects the background signal in the data
 #'
@@ -17,6 +19,7 @@
 #' @family P-value sum tests
 #' @references Luo, W., Friedman, M. S., Shedden, K., Hankenson, K. D., & Woolf, P. J. (2009). GAGE: generally applicable gene set enrichment for pathway analysis. BMC Bioinformatics
 #' @references \url{https://en.wikipedia.org/wiki/Phase-type_distribution}
+#' @references Sidje RB. Expokit: a software package for computing matrix exponentials. ACM Trans Math Softw. 1998;24: 130–156.
 #' @include Pvalues_S4Class.R
 #' @export
 setGeneric("betaUniformPvalueSumTest",
@@ -48,11 +51,23 @@ setMethod("betaUniformPvalueSumTest",
             
             initialProb <- Matrix(0,ncol = ncol(transitionMatrix), nrow = 1)
             initialProb[1:2] <- c(uniformProportion, 1-uniformProportion)
+
+            # The inverse CDF of the phase-type distribution is  alpha * exp(x*S) * 1vec, where S is the transition matrix and alpha the initial probability            
+            if("expoRkit" %in% .packages(all.available = TRUE) & getOption("metaDEGth_use_expoRkit", default = TRUE)){
+              
+              phaseRateP <- as.numeric( initialProb %*% expoRkit::expv(testStatistic*transitionMatrix, v = rep(1,2*nValues) ) )
+              if(abs(phaseRateP) <= 1E-18){ phaseRateP <- 1E-18 } #Catch numerical underflow
+            }else{
+              
+              if(!messagedUserAboutExpokit){
+                
+                message("The `expoRkit` R package provides dramatically improved performance for matrix exponentiation and is strongly recommended")
+                messagedUserAboutExpokit <<- TRUE
+              }
+              
+              phaseRateP <- sum(initialProb %*% Matrix::expm(testStatistic*transitionMatrix))
+            }
             
-            # The inverse CDF of the phase-type distribution is sum( alpha * exp(x*S) ), where S is the transition matrix and alpha the initial probability
-            phaseRateP <- sum(initialProb %*% Matrix::expm(testStatistic*transitionMatrix))
-            # TODO the transition matrix is upper triangualr, so there should be a considerably more efficient way to compute this!
-          
             return( new("Pvalue", mkScalar(phaseRateP)) )
           })
 
@@ -82,9 +97,8 @@ constructHyperexponentialSumTransitionMatrix <- function(nValues, uniformProport
                          rep(c(uniformProportion,fittedBetaShape*(1-uniformProportion)), times = (nValues-1)), # diagonal+2
                          c(rep(c((1-uniformProportion),0), times = (nValues-2)),(1-uniformProportion))  ), # diagonal+3
                    dims = c(2*nValues,2*nValues))
-    #TODO - consider smarter indexing and not populating 0 entries (since they are implcit). Likely only marginal gains though and maybe more obfuscated
-    #TODO - consider using check = FALSE. 2x speed improvement ...
+   #TODO - consider using check = FALSE. 2x speed improvement ...
   }
   
-  return(hyperexponentialSumTransitionMatrix)
+  return( drop0(hyperexponentialSumTransitionMatrix) )
 }
