@@ -1,0 +1,267 @@
+---
+title: "Dubious ways to take the exponential of a matrix"
+author: "Adam Sardar"
+date: "26/05/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+
+ There a number of means of taking the exponential of a matrix. This is a script exploring
+ 
+ 
+ 
+```{r}
+
+devtools::load_all()
+library(Matrix)
+```
+
+
+
+
+```{r}
+
+fbMod <- fitBetaUniformMixtureDistribution(siTAZdiffex_HFL1_diffexDT$siTAZ1_pValue)
+
+testPvalues <- rbetauniform(3, a = fbMod@a, lambda = fbMod@lambda)
+
+nValues <- length(testPvalues)
+fittedBetaShape <- fbMod@a
+uniformProportion <- fbMod@lambda
+            
+testStatistic <- sum(-log(testPvalues))
+            
+transitionMatrix <- constructHyperexponentialSumTransitionMatrix(nValues,
+                                                                 uniformProportion,
+                                                                 fittedBetaShape)
+            
+
+```
+
+# QR decomp
+
+```{r}
+
+qrDecomp <- qr(as.matrix(transitionMatrix))
+
+QRmat <- solve(transitionMatrix, diag(diag(transitionMatrix))) #Vmat
+
+
+QRmat %*% expm(Dmat) %*% solve(Rmat, Qmat)
+
+
+expm(transitionMatrix)
+
+Rmat <- qr.R(qrDecomp)
+Qmat <- qr.Q(qrDecomp)
+
+Tmat <- Qmat %*% transitionMatrix %*% t(Qmat)
+
+Dmat <- diag(diag(transitionMatrix))
+
+
+
+Qmat %*% Rmat %*% Dmat
+
+transitionMatrix %*% Qmat %*% Rmat
+
+EIGS <- eigen(Tmat)
+
+Vmat <- EIGS$vectors
+
+solve(qrDecomp)
+
+
+```
+
+# Schur
+
+```{r}
+
+schurDecomp <- Schur(transitionMatrix, vectors = TRUE)
+
+```
+
+
+Supposedly computation of the exponential of an upper-triangular matrix is easy - the Shur-Partlett method. Given the sparsity and regularly repeated elements, we should be able to compute it very quickly.
+
+Doubly so when we consider that we actually only care about a handful of elements (since we start at two positions, so we only need the top two rows of exp(A) ). Very easy to do using recursion
+
+## Truncated series
+
+https://books.google.co.uk/books?id=2Wz_zVUEwPkC&pg=PA86&lpg=PA86&dq=parlett+triangular&source=bl&ots=pUB4drJJU1&sig=ACfU3U3UF-OSnrkQkjU8U7fPbpGVU91gGA&hl=en&sa=X&ved=2ahUKEwi49t2KjtfpAhWHa8AKHV9kC5QQ6AEwAnoECAcQAQ#v=onepage&q=parlett%20triangular&f=false
+
+```{r}
+
+T1 <- constructHyperexponentialSumTransitionMatrix(1, uniformProportion, fittedBetaShape)
+T2 <- constructHyperexponentialSumTransitionMatrix(2, uniformProportion, fittedBetaShape)
+T3 <- constructHyperexponentialSumTransitionMatrix(3, uniformProportion, fittedBetaShape)
+T4 <- constructHyperexponentialSumTransitionMatrix(4, uniformProportion, fittedBetaShape)
+
+
+D1 <- diag(diag(T1))
+D2 <- diag(diag(T2))
+D3 <- diag(diag(T3))
+D4 <- diag(diag(T4))
+
+M1 <- T1; diag(M1) <- 0
+M2 <- T2; diag(M2) <- 0
+M3 <- T3; diag(M3) <- 0
+M4 <- T4; diag(M4) <- 0
+
+```
+
+
+```{r}
+
+library(microbenchmark)
+
+library(expoRkit)
+
+
+
+largeTransition <- constructHyperexponentialSumTransitionMatrix(5, uniformProportion, fittedBetaShape)
+
+expoRkit::expv(largeTransition, v = rep(1,2*5),
+                                    t = 1)
+
+transitionMatrixTriag <-  as(largeTransition, "triangularMatrix")
+
+transitionMatrixTriagDropped0 <- drop0(largeTransition)
+
+transitionMatrixTriagDropped0Triag <- as(transitionMatrixTriagDropped0, "triangularMatrix")
+X <- transitionMatrixTriagDropped0Triag
+
+
+X.csc <- new("matrix.csc", ra = X@x,
+                           ja = X@i + 1L,
+                           ia = X@p + 1L,
+                           dimension = X@Dim)
+
+
+ness <- SparseM_coo_to_REXPOKIT_coo (X.csc)
+
+
+SparseM_coo_to_REXPOKIT_coo(ness)
+
+microbenchmark(
+  Matrix::expm(transitionMatrixTriag),
+  Matrix::expm(largeTransition),
+  Matrix::expm(transitionMatrixTriagDropped0), 
+  Matrix::expm(transitionMatrixTriagDropped0Triag))
+
+
+```
+
+```{r}
+
+nValues <- 50
+
+EXPOKITmat <- data.table(ia = c(seq(1,2*nValues), seq(1,2*nValues-1), seq(1,2*nValues-2), seq(1,2*nValues-3)) , 
+                 ja = c(seq(1,2*nValues), seq(2,2*nValues), seq(3,2*nValues), seq(4,2*nValues)) ,
+                 a = c(rep(c(-1,-fittedBetaShape), times = nValues), #diagonal
+                         c(rep(c(0,fittedBetaShape*uniformProportion), times = (nValues-1)),0), # diagonal+1
+                         rep(c(uniformProportion,fittedBetaShape*(1-uniformProportion)), times = (nValues-1)), # diagonal+2
+                         c(rep(c((1-uniformProportion),0), times = (nValues-2)),(1-uniformProportion))  ) ) # diagonal+3 
+
+
+testTranisitionMat <- constructHyperexponentialSumTransitionMatrix(nValues = nValues, uniformProportion, fittedBetaShape)
+
+
+EXPOKITmat <- EXPOKITmat[abs(a) > 1E-10]
+
+n = nValues
+m = n-1
+ideg = 6
+lwsp = as.integer(n * (m + 2) + 5 * (m + 2) ^ 2 + ideg + 1)
+liwsp = max(m + 2, 7)
+iwsp = integer(length = liwsp)
+
+
+
+testTranisitionMatTriag <-  as(testTranisitionMat, "triangularMatrix")
+
+
+
+expoRkit::expv(testTranisitionMat, v = rep(1,2*nValues), t = c(1,2,3))
+
+microbenchmark::microbenchmark(
+  
+  Matrix::expm(testTranisitionMat),
+  
+    Matrix::expm(testTranisitionMatTriag),
+
+  expm::expm.Higham08(testTranisitionMat, balancing = FALSE),
+  
+  expoRkit::expv(testTranisitionMat, v = rep(1,2*nValues), t = 1 ),
+  
+  rexpokit:::expokit_mydgexpv_wrapper(n = n, 
+                                    m = m,
+                                    
+                                    v = rep(1,2*nValues),
+                                    t = 1, 
+                                    
+                                    tol = 1E-6,
+                                    anorm = 20,
+                                    
+                                    wsp = double(length = lwsp),
+                                    iwsp = iwsp,
+                                    lwsp = lwsp,
+                                    liwsp = liwsp,
+                                    
+                                    ia = EXPOKITmat$ia,
+                                    ja = EXPOKITmat$ja,
+                                    a = EXPOKITmat$a,
+                                    nz = nrow(EXPOKITmat) )
+)
+
+
+
+
+microbenchmark::microbenchmark(
+ Matrix::expm(testTranisitionMat),
+ Matrix::expm(drop0(testTranisitionMat)) %*% rep(1, 2*nValues),
+ expoRkit::expv(testTranisitionMat, v = rep(1,2*nValues), t = 1 ),
+ expoRkit::expv(drop0(testTranisitionMat), v = rep(1,2*nValues), t = 1 )
+)
+
+
+
+
+            initialProb <- Matrix(0,ncol = ncol(testTranisitionMat), nrow = 1)
+            initialProb[1:2] <- c(uniformProportion, 1-uniformProportion)
+            
+            sum(initialProb %*% Matrix::expm(5*testTranisitionMat))
+
+
+tmpmat_in_REXPOKIT_coo_fmt 
+
+rexpokit::expokit_dgexpv_Qmat()
+
+
+rexpokit:::expokit_mydgexpv_wrapper(n = n, 
+                                    m = m,
+                                    
+                                    v = rep(1,2*nValues),
+                                    t = c(1,2,3,4), 
+                                    
+                                    tol = 1E-6,
+                                    anorm = 20,
+                                    
+                                    wsp = double(length = lwsp),
+                                    iwsp = iwsp,
+                                    lwsp = lwsp,
+                                    liwsp = liwsp,
+                                    
+                                    ia = EXPOKITmat$ia,
+                                    ja = EXPOKITmat$ja,
+                                    a = EXPOKITmat$a,
+                                    nz = nrow(EXPOKITmat) )
+
+
+```
+
+
+Looks like expoRkit is the right choice. Correct use of S4 
