@@ -81,9 +81,14 @@ pathwayPvals[,fishersQ := na.omit(fishersQ) , by = geneSet]
 pathwayPvals[betaUniformMixtureQ < 0.01][pathwayType == "Drug Action"][order(-scoreSum)]
 
 pathwayPvals[fishersQ < 0.01][pathwayType == "Drug Action"][order(-scoreSum)]
+pathwayPvals[betaUniformMixtureQ < 0.01][pathwayType == "Drug Action"][order(-scoreSum)]
+
+pathwayPvals[pathway %like% "inib"]
+
 
 ```
 
+Some thoughts on this resource - there is an astonishing number of pathways in here, many of which are almost identical
 
 ```{r}
 
