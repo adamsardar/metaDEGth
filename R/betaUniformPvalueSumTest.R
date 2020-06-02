@@ -49,17 +49,22 @@ setMethod("betaUniformPvalueSumTest",
             
             transitionMatrix <- constructHyperexponentialSumTransitionMatrix(nValues, uniformProportion, fittedBetaShape)
             
-            initialProb <- Matrix(0,ncol = ncol(transitionMatrix), nrow = 1)
+            initialProb <- Matrix(0,ncol = ncol(transitionMatrix), nrow = 1, sparse = TRUE)
             initialProb[1:2] <- c(uniformProportion, 1-uniformProportion)
 
             # The inverse CDF of the phase-type distribution is  alpha * exp(x*S) * 1vec, where S is the transition matrix and alpha the initial probability            
-            if("expoRkit" %in% .packages(all.available = TRUE) & getOption("metaDEGth_use_expoRkit", default = TRUE)){
-              
-              phaseRateP <- as.numeric( initialProb %*% expoRkit::expv(testStatistic*transitionMatrix, v = rep(1,2*nValues) ) )
+            if(nValues > 1 & "expoRkit" %in% .packages(all.available = TRUE) & getOption("metaDEGth_use_expoRkit", default = TRUE)){
+              #Expokit is very unhappy about nValues = 1 case. This is quick to compute, so just move it to Matrix::expm
+
+              phaseRateP <- tryCatch({  as.numeric( initialProb %*% expoRkit::expv(testStatistic*transitionMatrix, v = rep(1,2*nValues) ) ) },
+                                     error = function(e){
+                                       message("Error code encountered in expokit code. Falling back to Matrix::expm (a little slower)")
+                                       sum( initialProb %*% Matrix::expm(testStatistic*transitionMatrix))})
+
               if(abs(phaseRateP) <= 1E-18){ phaseRateP <- sum(initialProb %*% Matrix::expm(testStatistic*transitionMatrix)) } # The fortran routine can sometimes become a little imprecise with very small floats
             }else{
               
-              if(!messagedUserAboutExpokit){
+              if(!messagedUserAboutExpokit & (nValues > 1) ){
                 
                 message("The `expoRkit` R package provides dramatically improved performance for matrix exponentiation and is strongly recommended")
                 messagedUserAboutExpokit <<- TRUE
@@ -84,7 +89,6 @@ constructHyperexponentialSumTransitionMatrix <- function(nValues, uniformProport
   if(nValues == 1){
     
       hyperexponentialSumTransitionMatrix <- Matrix(c(-1,0,0,-fittedBetaShape), ncol = 2, nrow = 2)
-    
   }else{
     
     # Populte the diagonal, diagonal+1, diagonal+2 and diagonal+3 with values
