@@ -45,6 +45,7 @@ Collate:
     'fishersPvalueSumTest.R'
     'fitBetaUniformModel.R'
     'koATF3_HCT116_diffexDT.R'
+    'metaDEG.R'
     'metaDEGth-package.R'
     'plot.BetaUniformModel.R'
     'siTAZdiffex_HFL1_diffexDT.R'
