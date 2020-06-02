@@ -122,10 +122,9 @@ library(expoRkit)
 
 
 
-largeTransition <- constructHyperexponentialSumTransitionMatrix(5, uniformProportion, fittedBetaShape)
+largeTransition <- constructHyperexponentialSumTransitionMatrix(1, uniformProportion, fittedBetaShape)
 
-expoRkit::expv(largeTransition, v = rep(1,2*5),
-                                    t = 1)
+expoRkit::expv(largeTransition, v = rep(1,2), t = 1)
 
 transitionMatrixTriag <-  as(largeTransition, "triangularMatrix")
 
