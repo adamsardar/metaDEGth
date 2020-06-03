@@ -4,15 +4,14 @@
 #'
 #' Given a tabular collection of gene sets and a table of
 #'
-#'
-#'
+#' @return A frame of gene sets, their members, their sizes and their meta-analysis P-values
+#' @export
 setGeneric("metaDEG",
            valueClass = "data.frame",
            function(pValueSet, geneSet, betaUniformFit, ...) { standardGeneric("metaDEG") },
            signature = c("pValueSet", "geneSet", "betaUniformFit") )
 
-# table and table
-# The real method
+
 #' @describeIn metaDEG Build a betaUniform model on the fly
 #' @importFrom utils capture.output
 setMethod("metaDEG",
@@ -35,17 +34,16 @@ setMethod("metaDEG",
 
               examplesOfDuplication <- paste0( capture.output( head(duplicatedEntries,  n = 15)), collapse = "\n")
 
-              warning("There are multiple ", geneSetMembersAttr ," entries for some ", geneSetNameAttr, " sets upon merging with the frame of P-values.",
-                      " This is usually because of repeated entries in the pValueSet and can cause complications. This is usually the result of a many-to-one gene mapping.",
-                      "Please inspect the input and aggregate (across splice-isoforms/microarray probes etc.) appropriately - or just choose the smallest p-value.",
-                      " Here are some examples:\n",
-                      examplesOfDuplication, "\n",
-                      "(",nrow(duplicatedEntries)," such duplicates in total ...)")
+              warning("There are multiple ", geneSetMembersAttr ," entries for some ", geneSetNameAttr, " sets upon merging with the frame of P-values, which is ambiguous.",
+                      " This is usually because of repeated entries in the pValueSet, typically the result of a many-to-one gene mapping.",
+                      " Please inspect the input and aggregate (across splice-isoforms/microarray probes etc.) appropriately - or just choose the smallest p-value per gene.",
+                      " Here are some examples of the ",nrow(duplicatedEntries), " duplicated rows:\n",
+                      examplesOfDuplication, "\n")
             }
 
             if(any(geneSetPvalsDT[,any(is.na(get(pValAttr)))])){
 
-              warning("Pvalue attribute ",pValAttr ," contans NA values. These will be filtered out, but it is better practice for it to be done elsewhere explicitly")
+              warning("Pvalue attribute ",pValAttr ," contans NA values. These shall be filtered out, but it is better practice for it to be done elsewhere explicitly")
               geneSetPvalsDT <- geneSetPvalsDT[!is.na( get(pValAttr) )]
             }
 
@@ -82,6 +80,28 @@ setMethod("metaDEG",
 
 # named list (geneSets) and named vector - cast to below
 
+#' @describeIn metaDEG Build a betaUniform model on the fly
+#' @importFrom purrr map_lgl map2
+setMethod("metaDEG",
+          c(pValueSet="list", geneSet="ANY", betaUniformFit = "ANY"),
+          function(pValueSet, geneSet, betaUniformFit,  pValAttr = "pVal", geneSetMembersAttr = "gene", ...) {
+
+            tryCatch(
+              stopifnot(
+                !is.null(names(pValueSet)),
+                !duplicated(names(pValueSet)),
+                all(map_lgl(pValueSet, ~all(is.pval(.x))))
+              ), error = function(e){stop("pValueSet must be a uniquely named list of P-values to use this method.")} )
+
+            pValueSetDT <- map2(names(pValueSet), pValueSet,
+                                ~{ data.tabe(gene = .x, pVal = .y) }) %>%
+                           rbindlist
+
+            setnames(pValueSetDT, c(geneSetMembersAttr, pValAttr))
+
+            callGeneric(pValueSet = pValueSetDT, geneSet = geneSet,  betaUniformFit = betaUniformFit, pValAttr = pValAttr, geneSetMembersAttr = geneSetMembersAttr, ...)
+          })
+
 # geneSetList (class) and named pValues (class)
 
-
+# geneSetList - cast to a table
