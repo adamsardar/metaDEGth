@@ -1,10 +1,12 @@
-
-
 #' meta differential gene expression (DEG) analysis
 #'
-#' Given a tabular collection of gene sets and a table of
+#' Given a collection of gene sets and
 #'
 #' @return A frame of gene sets, their members, their sizes and their meta-analysis P-values
+#' @param pValueSet P-values from experimental assay
+#' @param geneSet Gene set collections
+#' @param betaUniformFit A beta-uniform model of the P-value distribution [optional - can be estimated from the P-Values provided]
+#' @param ... Additional parameters for methods
 #' @export
 setGeneric("metaDEG",
            valueClass = "data.frame",
@@ -12,13 +14,20 @@ setGeneric("metaDEG",
            signature = c("pValueSet", "geneSet", "betaUniformFit") )
 
 
-#' @describeIn metaDEG Build a betaUniform model on the fly
+#' @describeIn metaDEG Build a beta-uniform model on the fly
 #' @importFrom utils capture.output
+#' @param pValAttr The name of the P-value attribute in the pValueSet frame
+#' @param geneSetNameAttr The name of the gene set identifier attribute in the geneSet frame
+#' @param geneSetMembersAttr The name of the gene set members attribute in the geneSet frame
 setMethod("metaDEG",
-          c(pValueSet="data.table", geneSet="data.table", betaUniformFit = "BetaUniformModel"),
+          c(pValueSet="data.frame", geneSet="data.frame", betaUniformFit = "BetaUniformModel"),
           function(pValueSet, geneSet, betaUniformFit, pValAttr = "pVal", geneSetNameAttr = "geneSet", geneSetMembersAttr = "gene"){
 
-            #TODO Check that geneSetMembersAttr is in pValueFrame
+            # TODO Check that geneSetMembersAttr is in pValueFrame
+            # TODO stopifnot checks
+
+            setDT(pValueSet)
+            setDT(geneSet)
 
             # A little ugly, but we need to ensure that all the fields are the correct type (often comes up with entrez gene ID's)
             pValueSetDT <- unique(pValueSet[, .( as.character(.SD[[1]] ), as.numeric(.SD[[2]]) ),  .SDcols = c(geneSetMembersAttr, pValAttr)])
@@ -61,8 +70,7 @@ setMethod("metaDEG",
             geneSetMetaDEGthPvals[, betaUniformMixtureQ := p.adjust(betaUniformMixtureP, method = "fdr")]
 
             return(geneSetMetaDEGthPvals[order(betaUniformMixtureP)])
-          }
-)
+})
 
 
 #' @describeIn metaDEG Build a betaUniform model on the fly
@@ -77,31 +85,44 @@ setMethod("metaDEG",
             callGeneric(pValueSet = pValueSet, geneSet = geneSet,  betaUniformFit = freshBetaUniformFit, pValAttr = pValAttr, ...) })
 
 
-
-# named list (geneSets) and named vector - cast to below
-
-#' @describeIn metaDEG Build a betaUniform model on the fly
+#' @describeIn metaDEG Provide geneSet as a named list of members
 #' @importFrom purrr map_lgl map2
 setMethod("metaDEG",
-          c(pValueSet="list", geneSet="ANY", betaUniformFit = "ANY"),
-          function(pValueSet, geneSet, betaUniformFit,  pValAttr = "pVal", geneSetMembersAttr = "gene", ...) {
+          c(pValueSet="ANY", geneSet="list", betaUniformFit = "ANY"),
+          function(pValueSet, geneSet,  geneSetNameAttr = "geneSet", geneSetMembersAttr = "gene", ...) {
+
+            tryCatch(
+              stopifnot(
+                !is.null(names(geneSet)),
+                !duplicated(names(geneSet))),
+                all(map_lgl(geneSet, is.vector)),
+              error = function(e){stop("geneSet must be a uniquely named list of members (as a vector) to use this method.")} )
+
+            geneSetDT <- map2(names(geneSet), geneSet,
+                                ~{ data.table(geneSet = .x, gene = unique(as.character(.y)) ) }) %>% #Cast is for tricky ID's like entrez (integers)
+                           rbindlist
+
+            setnames(geneSetDT, c(geneSetNameAttr, geneSetMembersAttr))
+
+            callGeneric(pValueSet = pValueSet, geneSet = geneSetDT, geneSetNameAttr = geneSetNameAttr, geneSetMembersAttr = geneSetMembersAttr, ...)
+          })
+
+
+#' @describeIn metaDEG Provide pValueSet as a uniquely named numeric vector of pvalues
+setMethod("metaDEG",
+          c(pValueSet="numeric", geneSet="ANY", betaUniformFit = "ANY"),
+          function(pValueSet, geneSet,  pValAttr = "pVal", geneSetMembersAttr = "gene", ...) {
 
             tryCatch(
               stopifnot(
                 !is.null(names(pValueSet)),
                 !duplicated(names(pValueSet)),
-                all(map_lgl(pValueSet, ~all(is.pval(.x))))
-              ), error = function(e){stop("pValueSet must be a uniquely named list of P-values to use this method.")} )
+                all(is.pval(pValueSet))
+              ), error = function(e){stop("pValueSet must be a uniquely named vector of P-values (no NA's) to use this method.")} )
 
-            pValueSetDT <- map2(names(pValueSet), pValueSet,
-                                ~{ data.tabe(gene = .x, pVal = .y) }) %>%
-                           rbindlist
+            pValueSetDT <- data.table(gene = names(pValueSet), pVal = pValueSet)
 
             setnames(pValueSetDT, c(geneSetMembersAttr, pValAttr))
 
-            callGeneric(pValueSet = pValueSetDT, geneSet = geneSet,  betaUniformFit = betaUniformFit, pValAttr = pValAttr, geneSetMembersAttr = geneSetMembersAttr, ...)
+            callGeneric(pValueSet = pValueSetDT, geneSet = geneSet, pValAttr = pValAttr, geneSetMembersAttr = geneSetMembersAttr, ...)
           })
-
-# geneSetList (class) and named pValues (class)
-
-# geneSetList - cast to a table
