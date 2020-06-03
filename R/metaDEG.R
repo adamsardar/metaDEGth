@@ -61,7 +61,7 @@ setMethod("metaDEG",
                   by = geneSetNameAttr]
 
             geneSetMetaDEGthPvals[,size := sapply(pValueSet, length)]
-            geneSetMetaDEGthPvals[,members := sapply(pValueSet, names)]
+            geneSetMetaDEGthPvals[,members := list(list(names(pValueSet[[1]]))), by = geneSetNameAttr]
 
             geneSetMetaDEGthPvals[, betaUniformMixtureP :=
                                       betaUniformPvalueSumTest(pValueSet[[1]], betaUniformFit),
