@@ -11,7 +11,7 @@ editor_options:
 
 GSE73555: Genes regulated by TAZ transcription co-factor in a lung fibroblast cell line; an RNAseq dataset (Ion Torrent). [Here's a link to the paper](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5307361/). I've used this dataset in the past and know that the signal is relatively clean, so shall include it within metaDEGth. Also, it's a perfect 'spike-in' study, so should be a nice critical assessment excercise.
 
-It is a pretty interesting experiment; the study authors used [siRNA](https://en.wikipedia.org/wiki/Small_interfering_RNA) to knock down the [TAZ](https://www.genecards.org/cgi-bin/carddisp.pl?gene=WWTR1) gene. TAZ operates a transcription co-activatoon and the protein contains a PDZ binding linear motif (probably somewhere within its disordered regions http://d2p2.pro/view/sequence/up/Q9GZV5), which is likely PPI partner. This GEO dataset describes a knock-out experiment performed in a lung fibroblast cell line; two different siRNA's for TAZ and a negative control (NTC) siRNA.
+It is a pretty interesting experiment; the study authors used [siRNA](https://en.wikipedia.org/wiki/Small_interfering_RNA) to knock down the [TAZ](https://www.genecards.org/cgi-bin/carddisp.pl?gene=WWTR1) gene. TAZ operates a transcription co-activation and the protein contains a PDZ binding linear motif (probably somewhere within its disordered regions http://d2p2.pro/view/sequence/up/Q9GZV5), which is likely PPI partner. This GEO dataset describes a knock-out experiment performed in a lung fibroblast cell line; two different siRNA's for TAZ and a negative control (NTC) siRNA.
 
 With the plummeting costs of transcriptomic profiling by RNAseq, these kind of datasets are appearing in increasing abundance on GEO. Turning these data into useful insight occurs in two stages:
 - first, we must download and align short DNA reads against a model of the target genome (typically human) so as to estimate transcript abundance (literally how many copies of each gene transcript/splice-isoform are there)
@@ -296,71 +296,3 @@ siTAZdiffex_HFL1_diffexDT[ p.adjust(siTAZ1_pValue,"fdr") < 1E-3][order(-siTAZ1_l
 
 What's at the top of the list? [Stanniocalcin](https://en.wikipedia.org/wiki/Stanniocalcin), which is a glycoprotein that controls calcium and phosphate - need I remind you that this study was within [fibrosis](https://www.nature.com/articles/srep18117).
 
-# Pathway enrichment
-
-```{r}
-
-siTAZdt <- siTAZdiffex_HFL1_diffexDT
-
-siTAZ1_BetaUniformModel <- fitBetaUniformMixtureDistribution(siTAZdt$siTAZ1_pValue)
-siTAZ2_BetaUniformModel <- fitBetaUniformMixtureDistribution(siTAZdt$siTAZ2_pValue)
-
-noiseFractionUpperBound(siTAZ1_BetaUniformModel)
-noiseFractionUpperBound(siTAZ2_BetaUniformModel)
-
-plot(siTAZ1_BetaUniformModel)
-plot(siTAZ2_BetaUniformModel)
-
-siTAZdt[, betaUnifScore1_FDR0.05 := betaUniformScore(siTAZ1_pValue, siTAZ2_BetaUniformModel, FDR = 0.05)]
-siTAZdt[, betaUnifScore2_FDR0.05 := betaUniformScore(siTAZ2_pValue, siTAZ2_BetaUniformModel, FDR = 0.05)]
-
-library(fgsea)
-
-hallmark_pathways <- gmtPathways("/mnt/c/broad_genesets/h.all.v7.0.entrez.gmt")
-hallmark_pathways_DT <- map2_dfr(hallmark_pathways, names(hallmark_pathways), ~ data.table(name = .y, geneID = .x))
-
-
-cannonical_pathways <- gmtPathways("/mnt/c/broad_genesets/c2.cp.v7.0.entrez.gmt")
-cannonical_pathways_DT <- map2_dfr(cannonical_pathways, names(cannonical_pathways), ~ data.table(name = .y, geneID = .x))
-
-chemical_genetic_peturbations <- gmtPathways("/mnt/c/broad_genesets/c2.cgp.v7.0.entrez.gmt")
-CGP_geneSets_DT <- map2_dfr(chemical_genetic_peturbations, names(chemical_genetic_peturbations), ~ data.table(name = .y, geneID = .x))
-
-#####
-
-cannonicalSets_siTAZ1_DT <- siTAZdt[ unique(cannonical_pathways_DT[, .(pathway = name, geneID = as.character(geneID))]), , on = "geneID", allow.cartesian=T][!is.na(siTAZ1_pValue),.(pValueSet = list(siTAZ1_pValue), geneSet = list(geneSymbol), scoreSum = sum(betaUnifScore1_FDR0.05)), by = pathway]
-
-cannonicalSets_siTAZ2_DT <- siTAZdt[ unique(cannonical_pathways_DT[, .(pathway = name, geneID = as.character(geneID))]), , on = "geneID", allow.cartesian=T][!is.na(siTAZ2_pValue),.(pValueSet = list(siTAZ2_pValue), geneSet = list(geneSymbol), scoreSum = sum(betaUnifScore2_FDR0.05)), by = pathway]
-
-merge(cannonicalSets_siTAZ1_DT[,.(pathway, scoreSum)], cannonicalSets_siTAZ2_DT[,.(pathway, scoreSum)], by = "pathway") %>%
-  ggplot(aes(x=scoreSum.x, y=scoreSum.y)) +
-  geom_point()
-
-
-
-cannonicalSets_siTAZ1_DT[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], siTAZ1_BetaUniformModel), by = pathway]
-cannonicalSets_siTAZ1_DT[, fishersP := fishersPvalueSumTest(pValueSet[[1]]), by = pathway]
-
-cannonicalSets_siTAZ1_DT[p.adjust(betaUniformMixtureP) < 0.01, .(pathway)]
-
-
-
-cannonicalSets_siTAZ2_DT[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], siTAZ2_BetaUniformModel), by = pathway]
-cannonicalSets_siTAZ2_DT[, fishersP := fishersPvalueSumTest(pValueSet[[1]]), by = pathway]
-
-
-REACT_TAZ1 <- cannonicalSets_siTAZ1_DT[pathway %like% "REACT"]
-REACT_TAZ1[, betaQ := p.adjust(betaUniformMixtureP, "fdr")]
-REACT_TAZ2 <- cannonicalSets_siTAZ2_DT[pathway %like% "REACT"]
-REACT_TAZ2[, betaQ := p.adjust(betaUniformMixtureP, "fdr")]
-
-
-merge(REACT_TAZ1, REACT_TAZ2, by = "pathway") %>% 
-  ggplot(aes(x = -log(betaUniformMixtureP.x), y = -log(betaUniformMixtureP.y))) +
-  geom_point()
-
-merge(REACT_TAZ1, REACT_TAZ2, by = "pathway")[p.adjust(betaUniformMixtureP.x, "fdr") < 0.01 & p.adjust(betaUniformMixtureP.y , "fdr") < 0.01]
-
-```
-
-Studying the Reactome pathways, it looks like we nicely capture a whole load of integrin, collagen, TAZ and the like pathways.

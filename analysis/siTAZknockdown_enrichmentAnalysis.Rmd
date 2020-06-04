@@ -1,0 +1,136 @@
+---
+title: "siTAZ knockdown"
+author: "Adam Sardar"
+date: "02/06/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+
+devtools::load_all()
+library(ggplot2)
+library(data.table)
+```
+
+
+```{r}
+
+siTAZ1_BetaUniformModel <- fitBetaUniformMixtureDistribution(siTAZdiffex_HFL1_diffexDT$siTAZ1_pValue)
+siTAZ2_BetaUniformModel <- fitBetaUniformMixtureDistribution(siTAZdiffex_HFL1_diffexDT$siTAZ2_pValue)
+
+# ~40% noise!!
+noiseFractionUpperBound(siTAZ1_BetaUniformModel)
+noiseFractionUpperBound(siTAZ2_BetaUniformModel)
+
+plot(siTAZ1_BetaUniformModel)
+plot(siTAZ2_BetaUniformModel)
+```
+
+
+#TF enrichement
+
+```{r}
+
+TFenrichTAZsi1 <- metaDEG(siTAZdiffex_HFL1_diffexDT,
+        TTRUST_TF2targets_DT,
+        betaUniformFit = siTAZ1_BetaUniformModel,
+        pValAttr = "siTAZ1_pValue",
+        geneSetNameAttr = "TF",
+        geneSetMembersAttr =  "ENSG")
+
+
+TFenrichTAZsi2 <- metaDEG(siTAZdiffex_HFL1_diffexDT,
+        TTRUST_TF2targets_DT,
+        betaUniformFit = siTAZ2_BetaUniformModel,
+        pValAttr = "siTAZ2_pValue",
+        geneSetNameAttr = "TF",
+        geneSetMembersAttr =  "ENSG")
+
+
+
+repeatedSIRNAdt <- merge(TFenrichTAZsi1[,.(TF, betaUniformMixtureP1 = betaUniformMixtureP)], 
+      TFenrichTAZsi2[,.(TF,betaUniformMixtureP2 = betaUniformMixtureP)],
+      by = "TF")
+
+repeatedSIRNAdt[, combinedP := fishersPvalueSumTest(c(betaUniformMixtureP1, betaUniformMixtureP2)), by = TF]
+repeatedSIRNAdt[, combinedQ := p.adjust(combinedP, "fdr")]
+
+repeatedSIRNAdt[TF == "WWTR1"]
+
+```
+
+Weakly significant result for TAZ (WWTR1) using TTRUST regulons. Let's inspect over all the TF's in TTRUST.
+
+```{r}
+
+
+
+
+TTRUST_TF2targets_DT
+
+
+
+
+```
+
+
+# Pathway enrichment
+
+```{r}
+
+
+siTAZdt[, betaUnifScore1_FDR0.05 := betaUniformScore(siTAZ1_pValue, siTAZ1_BetaUniformModel, FDR = 0.05)]
+siTAZdt[, betaUnifScore2_FDR0.05 := betaUniformScore(siTAZ2_pValue, siTAZ2_BetaUniformModel, FDR = 0.05)]
+
+library(fgsea)
+
+hallmark_pathways <- gmtPathways("/mnt/c/broad_genesets/h.all.v7.0.entrez.gmt")
+hallmark_pathways_DT <- map2_dfr(hallmark_pathways, names(hallmark_pathways), ~ data.table(name = .y, geneID = .x))
+
+
+cannonical_pathways <- gmtPathways("/mnt/c/broad_genesets/c2.cp.v7.0.entrez.gmt")
+cannonical_pathways_DT <- map2_dfr(cannonical_pathways, names(cannonical_pathways), ~ data.table(name = .y, geneID = .x))
+
+chemical_genetic_peturbations <- gmtPathways("/mnt/c/broad_genesets/c2.cgp.v7.0.entrez.gmt")
+CGP_geneSets_DT <- map2_dfr(chemical_genetic_peturbations, names(chemical_genetic_peturbations), ~ data.table(name = .y, geneID = .x))
+
+#####
+
+cannonicalSets_siTAZ1_DT <- siTAZdt[ unique(cannonical_pathways_DT[, .(pathway = name, geneID = as.character(geneID))]), , on = "geneID", allow.cartesian=T][!is.na(siTAZ1_pValue),.(pValueSet = list(siTAZ1_pValue), geneSet = list(geneSymbol), scoreSum = sum(betaUnifScore1_FDR0.05)), by = pathway]
+
+cannonicalSets_siTAZ2_DT <- siTAZdt[ unique(cannonical_pathways_DT[, .(pathway = name, geneID = as.character(geneID))]), , on = "geneID", allow.cartesian=T][!is.na(siTAZ2_pValue),.(pValueSet = list(siTAZ2_pValue), geneSet = list(geneSymbol), scoreSum = sum(betaUnifScore2_FDR0.05)), by = pathway]
+
+merge(cannonicalSets_siTAZ1_DT[,.(pathway, scoreSum)], cannonicalSets_siTAZ2_DT[,.(pathway, scoreSum)], by = "pathway") %>%
+  ggplot(aes(x=scoreSum.x, y=scoreSum.y)) +
+  geom_point()
+
+
+
+cannonicalSets_siTAZ1_DT[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], siTAZ1_BetaUniformModel), by = pathway]
+cannonicalSets_siTAZ1_DT[, fishersP := fishersPvalueSumTest(pValueSet[[1]]), by = pathway]
+
+cannonicalSets_siTAZ1_DT[p.adjust(betaUniformMixtureP) < 0.01, .(pathway)]
+
+
+
+cannonicalSets_siTAZ2_DT[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], siTAZ2_BetaUniformModel), by = pathway]
+cannonicalSets_siTAZ2_DT[, fishersP := fishersPvalueSumTest(pValueSet[[1]]), by = pathway]
+
+
+REACT_TAZ1 <- cannonicalSets_siTAZ1_DT[pathway %like% "REACT"]
+REACT_TAZ1[, betaQ := p.adjust(betaUniformMixtureP, "fdr")]
+REACT_TAZ2 <- cannonicalSets_siTAZ2_DT[pathway %like% "REACT"]
+REACT_TAZ2[, betaQ := p.adjust(betaUniformMixtureP, "fdr")]
+
+
+merge(REACT_TAZ1, REACT_TAZ2, by = "pathway") %>% 
+  ggplot(aes(x = -log(betaUniformMixtureP.x), y = -log(betaUniformMixtureP.y))) +
+  geom_point()
+
+merge(REACT_TAZ1, REACT_TAZ2, by = "pathway")[p.adjust(betaUniformMixtureP.x, "fdr") < 0.01 & p.adjust(betaUniformMixtureP.y , "fdr") < 0.01]
+
+```
+
+Studying the Reactome pathways, it looks like we nicely capture a whole load of integrin, collagen, TAZ and the like pathways.
