@@ -10,6 +10,7 @@
 #' Note that the use of this method for analysis of omics datasets was pioneered by Luo et al.
 #' 
 #' @inheritParams betaUniformPvalueSumTest
+#' @param rate Provide the rate for the expoential in the sum (distributed as a gamma) [optional]
 #' @return combinedPval A single P-value combining the results of multiple independent hypothesis tests into one
 #' @references \url{https://en.wikipedia.org/wiki/Fisher\%27s_method}
 #' @references \url{https://en.wikipedia.org/wiki/Erlang_distribution}
@@ -22,17 +23,17 @@
 setGeneric("fishersPvalueSumTest",
            signature = c("testPvalues"),
            valueClass = "Pvalue",
-           function(testPvalues, na.rm = TRUE, ...) standardGeneric("fishersPvalueSumTest"))
+           function(testPvalues, ...) standardGeneric("fishersPvalueSumTest"))
 
 #' @describeIn fishersPvalueSumTest Convert to P-values on the fly
 setMethod("fishersPvalueSumTest",
           signature = c( testPvalues = "numeric"),
-          function(testPvalues, na.rm = TRUE, ...) callGeneric( new("Pvalues", testPvalues), na.rm) )
+          function(testPvalues, ...) callGeneric( new("Pvalues", testPvalues), na.rm, ...) )
 
 #' @describeIn fishersPvalueSumTest Fisher's combined probability test
 setMethod("fishersPvalueSumTest",
           signature = c(testPvalues = "Pvalues"),
-          function(testPvalues, na.rm = TRUE, ...){
+          function(testPvalues, na.rm = TRUE, rate = 1, ...){
             
             if(na.rm){testPvalues <- na.omit(testPvalues)}
             if(length(testPvalues) == 0){stop("No non-NA P-values passed in to routine!")}
@@ -42,7 +43,7 @@ setMethod("fishersPvalueSumTest",
             nValues <- length(testPvalues)
             
             #Using the pgama parameterisation, rather than chi-squared, so as to be consistent with paper derivation
-            fishersMethodPval <- pgamma(testStatistic, shape = nValues, rate = 1, lower.tail = FALSE) 
+            fishersMethodPval <- pgamma(testStatistic, shape = nValues, rate = rate, lower.tail = FALSE)
             
             return(new("Pvalue", mkScalar(fishersMethodPval)))
           })
