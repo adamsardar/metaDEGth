@@ -37,6 +37,7 @@ time cut -f 1 ../SRP113531details.tsv | grep 'SRR' | parallel -j 1 ~/Programs/ka
 So. Fast. kallisto is a game changed for analysis pipelines. Took 90 minutes (roughly a minute per sample!).
 
 
+
 ```{r}
 library(purrr)
 library(GEOquery)
