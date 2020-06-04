@@ -62,6 +62,9 @@ setMethod("metaDEG",
 
             geneSetMetaDEGthPvals[,size := sapply(pValueSet, length)]
             geneSetMetaDEGthPvals[,members := list(list(names(pValueSet[[1]]))), by = geneSetNameAttr]
+            geneSetMetaDEGthPvals[,BUScoreFDR0.05 := list(list( betaUniformScore(pValueSet[[1]], betaUniformFit, FDR = 0.05))), by = geneSetNameAttr]
+
+
 
             geneSetMetaDEGthPvals[, betaUniformMixtureP :=
                                       betaUniformPvalueSumTest(pValueSet[[1]], betaUniformFit),
@@ -126,3 +129,7 @@ setMethod("metaDEG",
 
             callGeneric(pValueSet = pValueSetDT, geneSet = geneSet, pValAttr = pValAttr, geneSetMembersAttr = geneSetMembersAttr, ...)
           })
+
+
+
+#TODO use group generics and set up analagous methods for wilcoxen, gsea and fisher
