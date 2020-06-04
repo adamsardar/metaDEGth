@@ -15,11 +15,13 @@ library(data.table)
 
 SRP113531details <-  fread("http://trace.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?save=efetch&db=sra&rettype=runinfo&term=SRP113531")
 
-fwrite(SRP113531details, "/mnt/c/GSE73555/SRP113531details.tsv", sep = "\t", quote = FALSE)
+fwrite(SRP113531details, "~/RNAseq/GSE73555/SRP113531details.tsv", sep = "\t", quote = FALSE)
 ```
 
+From within a subdirectory (rawReads):
+
 ```{bash}
-time cut -f 1 ../SRP113531details.tsv | grep 'SRR' | parallel -j 5 'fasterq-dump {} -e 4 -t /tmp/scratch && pigz -p 4 {}_*.fastq'
+time cut -f 1 ../SRP113531details.tsv | grep 'SRR' | parallel -j 5 'fasterq-dump {} -e 2 -t /dev/shm && pigz -p 2 {}_*.fastq'
 ```
 
 This took quite a while! It's almost 100 RNAseq datasets (notice the zip command after fasterqdump - you will have no disk space left otherwise!)
@@ -36,6 +38,9 @@ So. Fast. kallisto is a game changed for analysis pipelines. Took 90 minutes (ro
 
 
 ```{r}
+library(purrr)
+library(GEOquery)
+library(stringr)
 
 parsedSOFT_GSE100118 <- getGEO(GEO = "GSE100118", GSEMatrix = FALSE, AnnotGPL = FALSE, getGPL = FALSE)
 
@@ -121,6 +126,8 @@ transcriptDGElist %<>% calcNormFactors
 ```
 
 
+Using voom to process the scRNAseq, in accordance with literature recommendations [here](https://www.biorxiv.org/content/10.1101/2020.01.15.907964v1.full)
+
 ```{r}
 
 GSE100118_designMat <- model.matrix(study ~ 0 + experiment + subgroup,
@@ -200,174 +207,49 @@ save(cas9OCT4_hsZygote_diffexDT, file = "./data/cas9OCT4_hsZygote_diffexDT.RData
 cas9OCT4_hsZygote_diffexDT[ p.adjust(koOCT4_pValue,"fdr") < 1E-3][order(-koOCT4_logFC)]
 ```
 
+I notice that NNANOG, a well known POU5F1 target is in there as diffexed ...
+
+### Comparison againg provided values
+
+Download raw rpkm and compare (to be sure)
 
 ```{r}
 
-OCTcrisprByGeneID <- cas9OCT4_hsZygote_diffexDT[!is.na(geneID), .(geneID = as.integer(unlist(strsplit(geneID, "; ")))), by = .(ENSG, accession, koOCT4_pValue)]
+rpkmMatMetaData <- fread("https://ftp.ncbi.nlm.nih.gov/geo/series/GSE100nnn/GSE100118/suppl/GSE100118_scRNA_pou5f1crispr_rpkm_170603.csv.gz", nrows = 3)
 
-cas9OCT4_BUMod <- fitBetaUniformMixtureDistribution(OCTcrisprByGeneID$koOCT4_pValue)
+embryoIndex <- unlist(rpkmMatMetaData[2,])
 
-plot.BetaUniformModel(cas9OCT4_BUMod, outputFormula = FALSE, outputParameters=FALSE)
-
-OCTcrisprByGeneID[, betaUnifScore_FDR0.05 := betaUniformScore(koOCT4_pValue, cas9OCT4_BUMod)]
+koOCT4rpkm <- fread("https://ftp.ncbi.nlm.nih.gov/geo/series/GSE100nnn/GSE100118/suppl/GSE100118_scRNA_pou5f1crispr_rpkm_170603.csv.gz", header = FALSE, fill = T, skip = 3)
 
 
-OCTcrisprByGeneID[TTRUST_TF2targets_DT[TF == "POU5F1"], , on = "geneID"]
+setkey(GSE100118_studyMetadata, study_title)
 
-falsePositiveFraction(cas9OCT4_BUMod, pValueThreshold = 0.05)/(falsePositiveFraction( cas9OCT4_BUMod, pValueThreshold = 0.05) + truePositiveFraction(cas9OCT4_BUMod, pValueThreshold = 0.05))
+GSE100118_studyMetadata[embryoIndex[-1:-2]][is.na(type)]
+#Need to manually fix the mislabelled columns!
 
-noiseFractionUpperBound(cas9OCT4_BUMod)
+embryoIndex[embryoIndex == "8.6."] <- "8.6"
+embryoIndex[embryoIndex == "C8.TE2"] <- "C8.TE.2"
+embryoIndex[embryoIndex == "C8.Teb"] <- "C8.TEb"
+embryoIndex[embryoIndex == "C12.8."] <- "C12.8"
 
-TF_pvals <- OCTcrisprByGeneID[  unique(TTRUST_TF2targets_DT[!is.na(geneID), .(TF, geneID)]), , on = "geneID"] %>% 
-                    .[!is.na(koOCT4_pValue),.(pValueSet = list(koOCT4_pValue), members = list(geneID), sumScore = sum(betaUnifScore_FDR0.05, na.rm=T)), by = TF]
+names(koOCT4rpkm) <- c(c("ENSG","gene"), GSE100118_studyMetadata[embryoIndex[-1:-2], study])
 
-for(i in 1:nrow(TF_pvals)){
-  
- betaUniformPvalueSumTest( TF_pvals[1,  pValueSet[[1]]], cas9OCT4_BUMod)
-}
-
-TF_pvals[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], cas9OCT4_BUMod), by = TF]
-TF_pvals[, fishersP := fishersPvalueSumTest(pValueSet[[1]]), by = TF]
-
-TF_pvals %>%
-  ggplot(aes(x = -log10( as.numeric(fishersP)), y = -log10(as.numeric(betaUniformMixtureP)))) +
-  geom_point()
-
-
-TF_pvals[, betaUniformMixtureQ := p.adjust(betaUniformMixtureP, "fdr")]
-TF_pvals[, fishersQ := p.adjust(fishersP, "fdr")]
-
-TF_pvals[order(betaUniformMixtureQ)]
-
-TF_pvals[TF == "POU5F1"]
-
-TF_pvals[betaUniformMixtureQ < 0.01]
-
-TF_pvals[order(betaUniformMixtureQ)]
-
-TF_pvals[fishersQ < 0.01]
+koOCT4rpkm[1:4,1:5]
 ```
 
-This is another focused dataset where TTRUST fails to pick out signal (or it's metaDEGth - also possible). I notice that NNANOG, a well known POU5F1 target is in there as diffexed ...
-
+This frame is detailed as RPKM from the study authors - but the reads are paired, so surely it's FPKM [see here](https://haroldpimentel.wordpress.com/2014/05/08/what-the-fpkm-a-review-rna-seq-expression-units/)
 
 
 ```{r}
 
-FANTOM5_hs_regcirc <- fread("zcat /mnt/c/regulatory_circutis/Network_compendium/Tissue-specific_regulatory_networks_FANTOM5-v1/32_high-level_networks/20_gastrointestinal_system.txt.gz") # Arbitrary cut off
-
-FANTOM5_hs_regcirc[V3 > 0.2, qplot(V3)] + scale_x_continuous(breaks = seq(0,1,0.1))
-```
-
-
-
-```{r}
-
-cas9OCT4_geneSymExpress <- cas9OCT4_hsZygote_diffexDT[!is.na(geneSymbol), .SD[koOCT4_pValue == min(koOCT4_pValue, na.rm = T)][1] , by = geneSymbol]
-
-cas9OCT4_geneSymExpress[,qplot(koOCT4_pValue, bins = 120)]
-
-OCT4knockout_betaUniformModel <- fitBetaUniformMixtureDistribution(cas9OCT4_geneSymExpress$koOCT4_pValue, nStarts = 20)
-# LLH fluctates a bit as we are on the bounds of parameter space!
-
-OCT4knockout_betaUniformModel
-
-noiseFractionUpperBound(OCT4knockout_betaUniformModel)
-
-# If we were to use a P-value cutoff of 0.01, what would the FP rate be?
-TP <- truePositiveFraction(OCT4knockout_betaUniformModel, pValueThreshold = 0.01)
-FP <- falsePositiveFraction(OCT4knockout_betaUniformModel, pValueThreshold = 0.01)
-round(100*FP/(TP+FP), digits = 1) # Over 30% would be false positives!
-# Perform meta-analysis using the TTRUST TF->target sets
-
-cas9OCT4_geneSymExpress[, betaUnifScore_FDR0.05 := betaUniformScore(koOCT4_pValue, OCT4knockout_betaUniformModel, FDR = 0.05)]
-
-
-
-regCirc_pvalues <- cas9OCT4_geneSymExpress[ unique(FANTOM5_hs_regcirc[V2 > 0.3, .(TF = V1, geneSymbol = V2)]), , on = "geneSymbol"][!is.na(koOCT4_pValue),.(pValueSet = list(koOCT4_pValue), geneSet = list(geneSymbol), scoreSum = sum(betaUnifScore_FDR0.05)), by = TF]
-
-
-regCirc_pvalues[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], OCT4knockout_betaUniformModel), by = TF]
-regCirc_pvalues[, fishersP := fishersPvalueSumTest(pValueSet[[1]]), by = TF]
-
-regCirc_pvalues[p.adjust(betaUniformMixtureP) < 0.01] # No significant gene sets
-regCirc_pvalues[p.adjust(fishersP) < 0.01] # Quite a few ... too many for so little signal?
-
-TTRUST_TF_pvalues[scoreSum > 0]
-```
-
-
-
-```{r}
-
-library(fgsea)
-
-hallmark_pathways <- gmtPathways("/mnt/c/broad_genesets/h.all.v7.0.entrez.gmt")
-hallmark_pathways_DT <- map2_dfr(hallmark_pathways, names(hallmark_pathways), ~ data.table(name = .y, geneID = .x))
-
-
-cannonical_pathways <- gmtPathways("/mnt/c/broad_genesets/c2.cp.v7.0.entrez.gmt")
-cannonical_pathways_DT <- map2_dfr(cannonical_pathways, names(cannonical_pathways), ~ data.table(name = .y, geneID = .x))
-
-
-
-chemical_genetic_peturbations <- gmtPathways("/mnt/c/broad_genesets/c2.cgp.v7.0.entrez.gmt")
-CGP_geneSets_DT <- map2_dfr(chemical_genetic_peturbations, names(chemical_genetic_peturbations), ~ data.table(name = .y, geneID = .x))
-
-
-cas9OCT4_geneIDexpress <- cas9OCT4_hsZygote_diffex_DT[!is.na(geneID), .SD[koOCT4_pValue == min(koOCT4_pValue, na.rm = T)][1] , by = geneID]
-
-cas9OCT4_geneIDexpress[,qplot(koOCT4_pValue, bins = 120)]
-
-OCT4knockout_betaUniformModel <- fitBetaUniformMixtureDistribution(cas9OCT4_geneIDexpress$koOCT4_pValue, nStarts = 20)
-
-cas9OCT4_geneIDexpress[, betaUnifScore_FDR0.05 := betaUniformScore(koOCT4_pValue, OCT4knockout_betaUniformModel, FDR = 0.05)]
-
-
-
-####
-
-
-braodHallmarkSetsDT <- cas9OCT4_geneSymExpress[ unique(hallmark_pathways_DT[, .(pathway = name, geneID)]), , on = "geneID"][!is.na(koOCT4_pValue),.(pValueSet = list(koOCT4_pValue), geneSet = list(geneSymbol), scoreSum = sum(betaUnifScore_FDR0.05)), by = pathway]
-
-
-braodHallmarkSetsDT[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], OCT4knockout_betaUniformModel), by = pathway]
-braodHallmarkSetsDT[, fishersP := fishersPvalueSumTest(pValueSet[[1]]), by = pathway]
-
-braodHallmarkSetsDT[p.adjust(betaUniformMixtureP, "fdr") < 0.01] 
-braodHallmarkSetsDT[p.adjust(fishersP, "fdr") < 0.05]
-
-braodHallmarkSetsDT[scoreSum > 0]
-
-
-####
-
-braodGCPsetsDT <- cas9OCT4_geneSymExpress[ unique(CGP_geneSets_DT[, .(pathway = name, geneID)]), , on = "geneID"][!is.na(koOCT4_pValue),.(pValueSet = list(koOCT4_pValue), geneSet = list(geneSymbol), scoreSum = sum(betaUnifScore_FDR0.05)), by = pathway]
-
-braodGCPsetsDT[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], OCT4knockout_betaUniformModel), by = pathway]
-braodGCPsetsDT[, fishersP := fishersPvalueSumTest(pValueSet[[1]]), by = pathway]
-
-braodGCPsetsDT[p.adjust(betaUniformMixtureP) < 0.01] 
-braodGCPsetsDT[p.adjust(fishersP) < 0.01]
-
-braodGCPsetsDT[scoreSum > 0]
-
-
-####
-
-braodCanonocalSetsDT <- cas9OCT4_geneSymExpress[ unique(cannonical_pathways_DT[, .(pathway = name, geneID)]), , on = "geneID"][!is.na(koOCT4_pValue),.(pValueSet = list(koOCT4_pValue), geneSet = list(geneSymbol), scoreSum = sum(betaUnifScore_FDR0.05)), by = pathway]
-
-braodCanonocalSetsDT[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], ATF3knockout_betaUniformModel), by = pathway]
-braodCanonocalSetsDT[, fishersP := fishersPvalueSumTest(pValueSet[[1]]), by = pathway]
-
-braodCanonocalSetsDT[p.adjust(betaUniformMixtureP) < 0.01] 
-braodCanonocalSetsDT[p.adjust(fishersP) < 0.01]
-
-braodGCPsetsDT[scoreSum > 0]
+koOCT4tpm <- 
 
 ```
 
 
+#TODO add gene length to frame, then use edgeR to convert to CPM
 
 
+http://luisvalesilva.com/datasimple/rna-seq_units.html#:~:text=Since%20RPKM%20actually%20builds%20on,to%20sequencing%20depth%2Dnormalized%20counts.
 
+https://liorpachter.wordpress.com/tag/tpm/
