@@ -1,0 +1,107 @@
+---
+title: "WZ4002 ADR enrchment"
+author: "Adam Sardar"
+date: "04/06/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+
+
+
+Study using BioPlanet
+
+# Should see MAPK1 and/or ERK. EGFR too.
+
+```{r}
+
+WZ4002_adrH1975_diffexDT[,qplot(H1975_pValue)]
+
+WZ4002DT <- WZ4002_adrH1975_diffexDT[,.SD[H1975_pValue == min(H1975_pValue)],by = geneID]
+
+tkiBUM <- fitBetaUniformMixtureDistribution(WZ4002DT$H1975_pValue)
+
+print.BetaUniformPlots(plot(tkiBUM))
+
+
+tkiWZ4002enrichDT <- metaDEG(WZ4002DT,
+        bioplanetPathwaysDT,
+        tkiBUM,
+        pValAttr = "H1975_pValue",
+        geneSetNameAttr = "BioPlanetName",
+        geneSetMembersAttr = "geneID" )
+
+WZ4002_adrH1975_diffexDT
+
+```
+
+And we do! ERK is more of a broad scale collection of pathways; any growth factor will activate it. Here we have a plausible mechanism that would unlock it.
+
+https://en.wikipedia.org/wiki/Extracellular_signal-regulated_kinases
+
+The most that anyone can do is propose a future route for experiments and analysis. Type II error is extremely expensive and false positives are far too often toleratred to find a promising result which vanishes.
+
+This could be the case with metaDEGth - but so it is provably so with wilcoxen, GSEA and fisher.
+
+
+```{r}
+
+erlotinibDT <- erlotinib_adrHCC827_diffexDT[,.SD[ER3_pValue == min(ER3_pValue)],by = geneID]
+
+erloE3BUM <- fitBetaUniformMixtureDistribution(erlotinibDT$ER3_pValue)
+
+print.BetaUniformPlots(plot(erloE3BUM))
+
+erlotinibEnrichDT <- metaDEG(erlotinibDT,
+        bioplanetPathwaysDT,
+        erloE3BUM,
+        pValAttr = "ER3_pValue",
+        geneSetNameAttr = "BioPlanetName",
+        geneSetMembersAttr = "geneID" )
+
+```
+
+
+```{r}
+
+library(fgsea)
+
+hallmark_pathways <- gmtPathways("/mnt/c/broad_genesets/h.all.v7.0.entrez.gmt")
+hallmark_pathways_DT <- map2_dfr(hallmark_pathways, names(hallmark_pathways), ~ data.table(name = .y, geneID = .x))
+
+
+cannonical_pathways <- gmtPathways("/mnt/c/broad_genesets/c2.cp.v7.0.entrez.gmt")
+cannonical_pathways_DT <- map2_dfr(cannonical_pathways, names(cannonical_pathways), ~ data.table(name = .y, geneID = .x))
+
+chemical_genetic_peturbations <- gmtPathways("/mnt/c/broad_genesets/c2.cgp.v7.0.entrez.gmt")
+CGP_geneSets_DT <- map2_dfr(chemical_genetic_peturbations, names(chemical_genetic_peturbations), ~ data.table(name = .y, geneID = .x))
+
+
+
+WZ4002_geneIDexpress <- WZ4002_adrH1975_diffexDT[!is.na(geneID), .SD[H1975_pValue == min(H1975_pValue, na.rm = T)][1] , by = geneID]
+
+
+WZ4002_betaUniformModel <- fitBetaUniformMixtureDistribution(WZ4002_geneIDexpress$H1975_pValue, nStarts = 20)
+
+WZ4002_geneIDexpress[, betaUnifScore_FDR0.05 := betaUniformScore(H1975_pValue, WZ4002_betaUniformModel, FDR = 0.05)]
+
+noiseFractionUpperBound(WZ4002_betaUniformModel)
+
+####
+
+
+cgpSetsDT <- WZ4002_geneIDexpress[ unique(cannonical_pathways_DT[, .(pathway = name, geneID)]), , on = "geneID"][!is.na(H1975_pValue),.(pValueSet = list(H1975_pValue), geneSet = list(geneSymbol), scoreSum = sum(betaUnifScore_FDR0.05)), by = pathway]
+
+cgpSetsDT[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], WZ4002_betaUniformModel), by = pathway]
+cgpSetsDT[, fishersP := fishersPvalueSumTest(pValueSet[[1]]), by = pathway]
+
+
+cgpSetsDT[pathway %like% "BIOCARTA"][p.adjust(betaUniformMixtureP, "fdr") < 0.01] 
+cgpSetsDT[p.adjust(fishersP, "fdr") < 0.01]
+
+cgpSetsDT[scoreSum > 0]
+
+
+
+```
