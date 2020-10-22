@@ -24,7 +24,7 @@ From within a subdirectory (rawReads):
 time cut -f 1 ../SRP113531details.tsv | grep 'SRR' | parallel -j 5 'fasterq-dump {} -e 2 -t /dev/shm && pigz -p 2 {}_*.fastq'
 ```
 
-This took quite a while! It's almost 100 RNAseq datasets (notice the zip command after fasterqdump - you will have no disk space left otherwise!)
+This took quite a while! It's almost 100 RNAseq datasets (notice the zip command after fasterqdump - you will have no disk space left otherwise!). This took ~20 hours on my home internet connection.
 
 Whilst this is a single-cell RNAseq data set, it's not from bulk tissue so there is no need to perform the cell-type determination study after the collection of data.
 

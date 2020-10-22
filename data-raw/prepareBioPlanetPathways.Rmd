@@ -43,6 +43,35 @@ save(bioplanetPathwaysDT, file = "./data/bioplanetPathwaysDT.RData", compress = 
 Let's try it out on the data
 
 
+```{r}
+
+system.time( ness <- metaDEG(siTAZdiffex_HFL1_diffexDT,
+        bioplanetPathwaysDT ,
+        pValAttr = "siTAZ1_pValue",
+        geneSetNameAttr = "BioPlanetName",
+        geneSetMembersAttr = "geneID") )
+
+
+ness <- bioplanetPathwaysDT[,.(list(geneID)), by = BioPlanetName]$V1
+names(ness) <- bioplanetPathwaysDT[,.(list(geneID)), by = BioPlanetName][, BioPlanetName]
+
+metaDEG(siTAZdiffex_HFL1_diffexDT,
+        head(ness),
+        pValAttr = "siTAZ1_pValue",
+        geneSetNameAttr = "BioPlanetName",
+        geneSetMembersAttr = "geneID")
+
+
+
+metaDEG(pValueSet = siTAZdiffex_HFL1_diffexDT[!duplicated(geneID), structure(siTAZ1_pValue, names = geneID)],
+        head(ness),
+        geneSetNameAttr = "BioPlanetName",
+        geneSetMembersAttr = "geneID")
+
+
+```
+
+
 
 Let's try it on erlotinib
 
@@ -141,7 +170,6 @@ profvis({
   pathwayPvals[, betaUniformMixtureP1 := betaUniformPvalueSumTest(pValueSet1[[1]], fbTAZ1),
                by = geneSet] })
 
-
 pathwayPvals[, betaUniformMixtureP2 := betaUniformPvalueSumTest(pValueSet2[[1]], fbTAZ1),
              by = geneSet]
 
@@ -149,6 +177,18 @@ pathwayPvals[, betaUniformMixtureQ1 := p.adjust(betaUniformMixtureP1, method = "
 pathwayPvals[, betaUniformMixtureQ2 := p.adjust(betaUniformMixtureP2, method = "fdr")]
 
 pathwayPvals[betaUniformMixtureQ1 < 0.01 & betaUniformMixtureQ2 <= 0.01 & size < 20]
+
+bioplanetPathwaysDT[, geneID := as.character(geneID)]
+
+
+
+
+metaDEG(siTAZdiffex_HFL1_diffexDT,
+        bioplanetPathwaysDT,
+        betaUniformFit = fbTAZ1,
+        pValAttr = "siTAZ1_pValue",
+        geneSetNameAttr = "BioPlanetName",
+        geneSetMemberAttr = "geneID")
 
 
 
