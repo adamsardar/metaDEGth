@@ -3,7 +3,7 @@ Type: Package
 Title: Combining differential expression P-values in a statistically consistent fashion whilst respecting background signal/noise trends
 Version: 1.0
 Date: 2019-12-04
-Authors@R: c(person("Adam", "Sardar", email = "adam@sardar.me.uk", role = c("aut", "cre")),
+Authors@R: c(person("Adam", "Sardar", email = "adam@sardar.me.uk", role = c("aut", "cre"), comment = c(ORCID="0000-0002-6912-6125")),
              person("Dimitris", "Vavavoulos", email = "dimitris.vavoulis@well.ox.ac.uk", role = c("aut")) )
 BugReports: https://github.com/adamsardar/metaDEGth/issues
 Description: metaDEGth: meta-analysis of Differentially Expressed Genes using parametric, empirically-derived P-value distributions
