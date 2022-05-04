@@ -1,4 +1,4 @@
-p you -#' Combine multiple independent P-values together using Fisher's method
+#' Combine multiple independent P-values together using Fisher's method
 #' 
 #' Fisher's method for combining P-values together consists of studying a test statistic of \eqn{T = \sum_i -log(P_i)} and 
 #' finding the corresponding point in the cumulative distribution of an appropriately parameterised chi-squared distribution.
