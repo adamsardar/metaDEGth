@@ -28,7 +28,7 @@ setGeneric("fishersPvalueSumTest",
 #' @describeIn fishersPvalueSumTest Convert to P-values on the fly
 setMethod("fishersPvalueSumTest",
           signature = c( testPvalues = "numeric"),
-          function(testPvalues, ...) callGeneric( new("Pvalues", testPvalues), na.rm, ...) )
+          function(testPvalues, ...) callGeneric( new("Pvalues", testPvalues), na.rm = TRUE, ...) )
 
 #' @describeIn fishersPvalueSumTest Fisher's combined probability test
 setMethod("fishersPvalueSumTest",
