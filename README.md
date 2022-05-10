@@ -1,4 +1,6 @@
   <!-- badges: start -->
+[![R-CMD-check](https://github.com/adamsardar/metaDEGth/workflows/R-CMD-check/badge.svg)](https://github.com/adamsardar/metaDEGth/actions)
+[![Codecov test coverage](https://codecov.io/gh/adamsardar/metaDEGth/branch/master/graph/badge.svg)](https://app.codecov.io/gh/adamsardar/metaDEGth?branch=master)
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-blue.svg)](https://www.tidyverse.org/lifecycle/#experimental)
   <!-- badges: end -->
