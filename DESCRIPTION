@@ -31,8 +31,9 @@ Suggests:
     actuar (>= 2.3),
     BioNet (>= 1.4),
     testthat (>= 2.0),
-    expoRkit (>= 0.9)
-RoxygenNote: 7.1.0
+    expoRkit (>= 0.9),
+    covr
+RoxygenNote: 7.1.2
 Collate: 
     'BetaUniformModel_S4Class.R'
     'Pvalues_S4Class.R'
