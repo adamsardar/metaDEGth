@@ -53,26 +53,8 @@ setMethod("betaUniformPvalueSumTest",
             initialProb[1:2] <- c(uniformProportion, 1-uniformProportion)
 
             # The inverse CDF of the phase-type distribution is  alpha * exp(x*S) * 1vec, where S is the transition matrix and alpha the initial probability            
-            if(nValues > 1 & "expoRkit" %in% .packages(all.available = TRUE) & getOption("metaDEGth_use_expoRkit", default = TRUE)){
-              #Expokit is very unhappy about nValues = 1 case. This is quick to compute, so just move it to Matrix::expm
-
-              phaseRateP <- tryCatch({  as.numeric( initialProb %*% expoRkit::expv(testStatistic*transitionMatrix, v = rep(1,2*nValues) ) ) },
-                                     error = function(e){
-                                       message("Error code encountered in expokit code. Falling back to Matrix::expm (a little slower)")
-                                       sum( initialProb %*% Matrix::expm(testStatistic*transitionMatrix))})
-
-              if(abs(phaseRateP) <= 1E-18){ phaseRateP <- sum(initialProb %*% Matrix::expm(testStatistic*transitionMatrix)) } # The fortran routine can sometimes become a little imprecise with very small floats
-            }else{
-              
-              if(!messagedUserAboutExpokit & (nValues > 1) ){
-                
-                message("The `expoRkit` R package provides dramatically improved performance for matrix exponentiation and is strongly recommended")
-                messagedUserAboutExpokit <<- TRUE
-              }
-              
-              phaseRateP <- sum(initialProb %*% Matrix::expm(testStatistic*transitionMatrix))
-            }
-            
+            phaseRateP <- sum(initialProb %*% Matrix::expm(testStatistic*transitionMatrix))
+        
             return( new("Pvalue", mkScalar(phaseRateP)) )
           })
 
