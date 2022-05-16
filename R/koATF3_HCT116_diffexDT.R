@@ -39,9 +39,10 @@
 #' 
 #' koATF3_geneIDExpress[, betaUnifScore_FDR0.05 := betaUniformScore(koATF3_pValue, ATF3knockout_betaUniformModel, FDR = 0.05)]
 #' 
+#' TTRUST_TF2targets_DT[, geneID := as.character(geneID)]
+#' 
 #' TTRUST_TF_pvalues <- koATF3_geneIDExpress[ unique(TTRUST_TF2targets_DT[!is.na(geneID), .(TF,geneID)]), , on = "geneID"][!is.na(koATF3_pValue),.(pValueSet = list(koATF3_pValue), geneSet = list(geneSymbol), scoreSum = sum(betaUnifScore_FDR0.05)), by = TF]
 #' 
-#' TTRUST_TF2targets_DT[, geneID := as.character(geneID)]
 #' 
 #' TTRUST_TF_pvalues[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], ATF3knockout_betaUniformModel), by = TF]
 #' TTRUST_TF_pvalues[, fishersP := fishersPvalueSumTest(pValueSet[[1]]), by = TF]
