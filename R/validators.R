@@ -17,7 +17,7 @@ on_failure(validateAnnotationDT) <- function(call, env){ paste0(deparse(call$x),
 
 ############
 
-#' @importFrom igraph is.igraph is.directed
+#' @importFrom igraph is.igraph is.directed vcount
 validateNetwork <- function(candidateNet, directed = FALSE){
   
   assert_that(is.igraph(candidateNet),

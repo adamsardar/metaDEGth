@@ -34,7 +34,7 @@ koATF3_HCT116_diffexDT \%>\% ggplot(aes(x = koATF3_logFC, y = -log10(koATF3_pVal
     scale_colour_manual(values = c("darkgrey","dodgerblue")) +
     theme_bw()
 
-koATF3_geneIDExpress <- koATF3_HCT116_diffexDT[!is.na(geneSymbol), .SD[koATF3_pValue == min(koATF3_pValue, na.rm = T)][1] , by = geneID]
+koATF3_geneIDExpress <- koATF3_HCT116_diffexDT[!is.na(geneSymbol), .SD[koATF3_pValue == min(koATF3_pValue, na.rm = TRUE)][1] , by = geneID]
 
 koATF3_geneIDExpress[,qplot(koATF3_pValue, bins = 100)]
 

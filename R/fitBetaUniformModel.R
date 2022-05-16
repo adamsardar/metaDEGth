@@ -132,7 +132,7 @@ qbetauniform <- function(p, a, lambda){
 
 #' Random draw function for Beta-uniform model
 #' @references Pounds, S., & Morris, S. W. (2003). Estimating the occurrence of false positives and false negatives in microarray studies by approximating and partitioning the empirical distribution of p-values. Bioinformatics
-#' @importFrom stats runif rbeta
+#' @importFrom stats runif rbeta rbinom
 #' @export
 rbetauniform <- function(n, a, lambda){
   
