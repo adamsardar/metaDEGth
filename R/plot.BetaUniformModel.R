@@ -86,9 +86,3 @@ plot.BetaUniformModel <- function(x, showFit = TRUE, outputParameters = TRUE, ou
                         qqPlot = pVal_qqPlot,
                         LLsurface = LLsurface_plot), class = "BetaUniformPlots"))
 }
-
-#' @import patchwork
-print.BetaUniformPlots <- function(x, ...){
-
-  return( plot(x$pValHist / (x$qqPlot | x$LLsurface)) )
-}

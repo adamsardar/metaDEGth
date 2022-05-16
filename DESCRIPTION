@@ -16,16 +16,15 @@ Imports:
     Biobase (>= 2.4),
     data.table (>= 1.11.0),
     ggplot2 (>= 1.0),
-    igraph(>= 1.0),
+    igraph (>= 1.0),
     latex2exp (>= 0.4),
     magrittr (>= 1.5),
     MASS (>= 7.0),
     Matrix (>= 1.2),
-    patchwork (>= 1.0),
     purrr (>= 0.2),
     stringr (>= 1.2)
 Depends:
-    R (>= 3.5),
+    R (>= 3.6),
     methods
 Suggests: 
     actuar (>= 2.3),
