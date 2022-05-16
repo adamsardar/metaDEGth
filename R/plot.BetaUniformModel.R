@@ -1,4 +1,4 @@
-globalVariables(c("..density.."))
+globalVariables(c('..density..', 'LLH', 'a', 'lambda', '.'))
 #' Plot summary for fitted Beta-Uniform models
 #'
 #' Produce a list of summary ggplots. The default print method produces a grid panel, or you can extract and use them at your wish.
@@ -14,6 +14,7 @@ globalVariables(c("..density.."))
 #' @return A named list with three ggplots: p-value distribution; QQplot of P-values against a the fitted mixture model and liklihood surface of paramter estimates.
 #' @import ggplot2
 #' @import latex2exp
+#' @importFrom grDevices terrain.colors
 #' @export
 plot.BetaUniformModel <- function(x, showFit = TRUE, outputParameters = TRUE, outputFormula = TRUE, studyName = NULL, ...){
 
@@ -57,7 +58,7 @@ plot.BetaUniformModel <- function(x, showFit = TRUE, outputParameters = TRUE, ou
          y = "Observed Quantile") +
     geom_abline(intercept = 0, slope = 1, linetype = "dotted")
 
-  paramSpace <- expand.grid(a = seq(0,1,0.1), lambda = seq(0,1,0.1)) %>% data.table
+  paramSpace <- data.table(expand.grid(a = seq(0,1,0.1), lambda = seq(0,1,0.1)))
 
   pVals <- x@pvalues@.Data #slot access is expensive
   paramSpace[, LLH := sum(log( dbetauniform(pVals, a, lambda) )), by = .(a, lambda)]

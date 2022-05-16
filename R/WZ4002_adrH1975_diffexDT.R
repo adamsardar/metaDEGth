@@ -10,6 +10,8 @@
 #' @usage data(WZ4002_adrH1975_diffexDT)
 #' @examples
 #' library(ggplot2)
+#' library(magrittr)
+#' 
 #' data(WZ4002_adrH1975_diffexDT)
 #' 
 #' WZ4002_adrH1975_diffexDT %>%

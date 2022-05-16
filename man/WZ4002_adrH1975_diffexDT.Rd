@@ -23,6 +23,8 @@ Generated 10 December 2019 from raw expression values dowloaded from GEO. Values
 }
 \examples{
 library(ggplot2)
+library(magrittr)
+
 data(WZ4002_adrH1975_diffexDT)
 
 WZ4002_adrH1975_diffexDT \%>\%

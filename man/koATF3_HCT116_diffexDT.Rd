@@ -26,6 +26,7 @@ as a decoy set to test methods against.
 \examples{
 library(data.table)
 library(ggplot2)
+library(magrittr)
 data(koATF3_HCT116_diffexDT)
 
 koATF3_HCT116_diffexDT \%>\% ggplot(aes(x = koATF3_logFC, y = -log10(koATF3_pValue))) + 

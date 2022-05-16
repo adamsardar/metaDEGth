@@ -21,6 +21,7 @@ Kallisto before transcript abundances were estimated using limma-voom. Finally, 
 }
 \examples{
 library(ggplot2)
+library(magrittr)
 data(cas9OCT4_hsZygote_diffexDT)
 
 cas9OCT4_hsZygote_diffexDT \%>\% ggplot(aes(x = koOCT4_logFC, y = -log10(koOCT4_pValue))) + 

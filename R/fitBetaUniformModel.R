@@ -11,7 +11,7 @@ globalVariables(c("..density.."))
 #' @param nStarts How many repeats of the fitting routine should the routine run before the best LLH is picked? The default is 10, but in some cases (when there is no 'clean' P-value distribution), it might be worth running for more iterations.
 #' @return A BetaUniformModel object, detailign the fit
 #' @importFrom MASS fitdistr
-#' @importFrom stats na.omit coef logLik
+#' @importFrom stats na.omit coef logLik sd
 #' @importFrom purrr map possibly
 #' @export
 #' @seealso betaUniformScore BioNet::fitBumModel

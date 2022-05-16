@@ -7,6 +7,5 @@
 #' @import assertthat
 #' @import methods
 #' @import Biobase
-#' @importFrom magrittr "%<>%"
-#' @importFrom magrittr add
+#' @import magrittr
 NULL

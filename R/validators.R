@@ -1,18 +1,6 @@
 #Uniprot regexp taken from http://www.uniprot.org/help/accession_numbers
 uniprotRegexp <- "[OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2}"
 
-validateSANTAresultDT <- function(candidateDT){
-  
-    assert_that(is.data.table(candidateDT),
-                nrow(candidateDT) > 0,
-                all( c("geneSet","geneSetMembers","SANTAobject","SANTAnodeScores","SANTA.Pvalue","SANTA.Qvalue") %in% colnames(candidateDT)),
-                nrow(candidateDT[duplicated(geneSet)]) == 0)
-  
-  invisible(candidateDT)
-}
-
-on_failure(validateSANTAresultDT) <- function(call, env){ paste0(deparse(call$x), " should be a data.table resulting from running SANTAnetEnrichment function, with no duplciated geneSet names") }
-
 
 ############
 
@@ -29,7 +17,7 @@ on_failure(validateAnnotationDT) <- function(call, env){ paste0(deparse(call$x),
 
 ############
 
-#' @importFrom igraph is.igraph
+#' @importFrom igraph is.igraph is.directed
 validateNetwork <- function(candidateNet, directed = FALSE){
   
   assert_that(is.igraph(candidateNet),
@@ -44,8 +32,6 @@ on_failure(validateNetwork) <- function(call, env){ paste0(deparse(call$x), ":  
 ############
 
 validateGeneSetOfInterest <- function(candidateGeneSet, enrichDT){
-  
-  enrichDT %>% validateSANTAresultDT
   
   assert_that(is.character(candidateGeneSet),
               length(candidateGeneSet) > 0,
@@ -159,6 +145,8 @@ on_failure(validatePvalues) <- function(call, env){ paste0(deparse(call$x), "  s
 
 ############
 
+#' @importFrom stringr str_extract regex
+#' @importFrom igraph vertex_attr_names vertex_attr `V<-`
 validateIgraphWithPvalues <- function(candidateNetWithPvals){
   
   validateNetwork(candidateNetWithPvals)
