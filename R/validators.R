@@ -64,8 +64,6 @@ on_failure(validateGeneSetList) <- function(call, env){ paste0(deparse(call$x), 
 
 validateGeneSetOfInterest <- function(candidateGeneSet, enrichDT){
   
-  enrichDT %>% validateSANTAresultDT
-  
   assert_that(is.character(candidateGeneSet),
               length(candidateGeneSet) > 0,
               all(candidateGeneSet %in% enrichDT$geneSet) )

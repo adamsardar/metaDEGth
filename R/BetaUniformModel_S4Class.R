@@ -134,7 +134,10 @@ setMethod("trueNegativeFraction",
 
 
 
-# Upper bound on the the noise component of mixture distribution [Equation (3)]: π in the equations below
+#' Upper bound on the the noise component of mixture distribution 
+#' 
+#' π in equation 3 from Morris & Pounds
+#' @export
 setGeneric("noiseFractionUpperBound", valueClass = "ScalarNumeric", function(obj) standardGeneric("noiseFractionUpperBound"))
 
 setMethod("noiseFractionUpperBound",
@@ -144,6 +147,7 @@ setMethod("noiseFractionUpperBound",
 
 
 # False discovery rate - of BH fame. Equation 6 from M&P
+#' @export
 setGeneric("FDRestimate",  valueClass = "ScalarNumeric",
            function(obj, pValueThreshold){ standardGeneric("FDRestimate") } )
 
@@ -155,6 +159,7 @@ setMethod("FDRestimate",
 
 
 # pValueThreshold estimate - estimates a threshdold such that FDRestimate(obj, pValueThreshold) <= confidenceLevel. Equatuion 7 in Morris & Pounds
+#' @export
 setGeneric("pValueThresholdAtConfidence",  valueClass = "ScalarNumeric",
            function(obj, confidenceLevel){ standardGeneric("pValueThresholdAtConfidence") } )
 
