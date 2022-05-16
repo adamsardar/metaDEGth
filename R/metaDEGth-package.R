@@ -6,6 +6,7 @@
 #' @import data.table
 #' @import assertthat
 #' @import methods
+#' @import Biobase
 #' @importFrom magrittr "%<>%"
 #' @importFrom magrittr add
 NULL
