@@ -5,9 +5,10 @@ Version: 1.0
 Date: 2019-12-04
 Authors@R: c(person("Adam", "Sardar", email = "adam@sardar.me.uk", role = c("aut", "cre"), comment = c(ORCID="0000-0002-6912-6125")),
              person("Dimitris", "Vavavoulos", email = "dimitris.vavoulis@well.ox.ac.uk", role = c("aut")) )
-BugReports: https://github.com/adamsardar/metaDEGth/issues
-Description: metaDEGth: meta-analysis of Differentially Expressed Genes using parametric, empirically-derived P-value distributions
+BugReports: https://gitlab.internal.etherapeutics.co.uk/platform/datasciops/metadegth/-/issues
+Description: metaDEGth: meta-analysis of Differentially Expressed Genes using parametric, empirically-derived P-value distributions.
 License: MPL-2.0 | file LICENSE
+URL: https://gitlab.internal.etherapeutics.co.uk/platform/datasciops/metadegth
 ByteCompile: TRUE
 LazyData: true
 Encoding: UTF-8
@@ -26,12 +27,13 @@ Imports:
 Depends:
     R (>= 3.6),
     methods
-Suggests: 
+Suggests:
     actuar (>= 2.3),
     BioNet (>= 1.4),
     testthat
+Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.0
-Collate: 
+Collate:
     'BetaUniformModel_S4Class.R'
     'Pvalues_S4Class.R'
     'TTRUST_TFtarget_relationships.R'

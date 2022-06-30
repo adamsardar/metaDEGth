@@ -42,7 +42,7 @@ metaDEG(pValueSet, geneSet, betaUniformFit, ...)
 
 \item{geneSet}{Gene set collections}
 
-\item{betaUniformFit}{A beta-uniform model of the P-value distribution [optional - can be estimated from the P-Values provided]}
+\item{betaUniformFit}{A beta-uniform model of the P-value distribution \link{optional - can be estimated from the P-Values provided}}
 
 \item{...}{Additional parameters for methods}
 

@@ -14,7 +14,7 @@ A data.table detailing 795 transcription factors and 2,492 targets. Some target 
 data(TTRUST_TF2targets_DT)
 }
 \description{
-The TRRUST (Transcriptional Regulatory Relationships Unraveled by Sentence-based Text mining) resource is a semi-automated database of 
+The TRRUST (Transcriptional Regulatory Relationships Unraveled by Sentence-based Text mining) resource is a semi-automated database of
 transcription factor relationships. It has been augmented with ensembl gene identifiers.
 }
 \details{

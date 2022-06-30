@@ -15,7 +15,7 @@ data(cas9OCT4_hsZygote_diffexDT)
 }
 \description{
 GSE100118 is a CRISPR knockdown study of the pluripotency transcription factor OCT4 during human embryogenesis.
- 
+
 Generated 10 December 2019 from the trimmed reads associated with project on GEO. These were downloaded and aligned against the human genome using
 Kallisto before transcript abundances were estimated using limma-voom. Finally, differential gene expression values were computed.
 }

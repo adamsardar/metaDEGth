@@ -15,7 +15,7 @@ data(siTAZdiffex_HFL1_diffexDT)
 }
 \description{
 GSE73555 studied genes regulated by the transcription co-factor TAZ in a lung fibroblast cell line (HFL-1). The authors used siRNA
-to knock down the TAZ gene (aka WWTR1); two different siRNAs for TAZ and a negative control (NTC) siRNA. It serves 
+to knock down the TAZ gene (aka WWTR1); two different siRNAs for TAZ and a negative control (NTC) siRNA. It serves
 as a perfect 'spike-in' study for us to test gene set enrichment techniques against.
 }
 \details{
