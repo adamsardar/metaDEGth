@@ -81,8 +81,8 @@ TTRUST_TF2targets_DT
 ```{r}
 
 
-siTAZdt[, betaUnifScore1_FDR0.05 := betaUniformScore(siTAZ1_pValue, siTAZ1_BetaUniformModel, FDR = 0.05)]
-siTAZdt[, betaUnifScore2_FDR0.05 := betaUniformScore(siTAZ2_pValue, siTAZ2_BetaUniformModel, FDR = 0.05)]
+siTAZdiffex_HFL1_diffexDT[, betaUnifScore1_FDR0.05 := betaUniformScore(siTAZ1_pValue, siTAZ1_BetaUniformModel, FDR = 0.05)]
+siTAZdiffex_HFL1_diffexDT[, betaUnifScore2_FDR0.05 := betaUniformScore(siTAZ2_pValue, siTAZ2_BetaUniformModel, FDR = 0.05)]
 
 library(fgsea)
 

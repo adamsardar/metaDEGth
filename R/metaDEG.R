@@ -1,3 +1,5 @@
+globalVariables(c('.', 'size', 'members', 'BUScoreFDR0.05', 'betaUniformMixtureP', 'betaUniformMixtureQ'))
+
 #' meta differential gene expression (DEG) analysis
 #'
 #' Given a collection of gene sets and
@@ -16,6 +18,7 @@ setGeneric("metaDEG",
 
 #' @describeIn metaDEG Build a beta-uniform model on the fly
 #' @importFrom utils capture.output
+#' @importFrom stats p.adjust
 #' @param pValAttr The name of the P-value attribute in the pValueSet frame
 #' @param geneSetNameAttr The name of the gene set identifier attribute in the geneSet frame
 #' @param geneSetMembersAttr The name of the gene set members attribute in the geneSet frame

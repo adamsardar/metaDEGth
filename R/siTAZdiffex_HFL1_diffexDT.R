@@ -12,6 +12,7 @@
 #' 
 #' @examples 
 #' library(ggplot2)
+#' library(magrittr)
 #' data(siTAZdiffex_HFL1_diffexDT)
 #' 
 #' siTAZdiffex_HFL1_diffexDT %>% ggplot(aes(x = siTAZ1_logFC, y = -log10(siTAZ1_pValue))) + 

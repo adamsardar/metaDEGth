@@ -12,6 +12,7 @@
 #' @examples
 #' library(data.table)
 #' library(ggplot2)
+#' library(magrittr)
 #' data(koATF3_HCT116_diffexDT)
 #' 
 #' koATF3_HCT116_diffexDT %>% ggplot(aes(x = koATF3_logFC, y = -log10(koATF3_pValue))) + 
@@ -19,7 +20,7 @@
 #'     scale_colour_manual(values = c("darkgrey","dodgerblue")) +
 #'     theme_bw()
 #' 
-#' koATF3_geneIDExpress <- koATF3_HCT116_diffexDT[!is.na(geneSymbol), .SD[koATF3_pValue == min(koATF3_pValue, na.rm = T)][1] , by = geneID]
+#' koATF3_geneIDExpress <- koATF3_HCT116_diffexDT[!is.na(geneSymbol), .SD[koATF3_pValue == min(koATF3_pValue, na.rm = TRUE)][1] , by = geneID]
 #' 
 #' koATF3_geneIDExpress[,qplot(koATF3_pValue, bins = 100)]
 #' 
@@ -38,7 +39,10 @@
 #' 
 #' koATF3_geneIDExpress[, betaUnifScore_FDR0.05 := betaUniformScore(koATF3_pValue, ATF3knockout_betaUniformModel, FDR = 0.05)]
 #' 
+#' TTRUST_TF2targets_DT[, geneID := as.integer(geneID)]
+#' 
 #' TTRUST_TF_pvalues <- koATF3_geneIDExpress[ unique(TTRUST_TF2targets_DT[!is.na(geneID), .(TF,geneID)]), , on = "geneID"][!is.na(koATF3_pValue),.(pValueSet = list(koATF3_pValue), geneSet = list(geneSymbol), scoreSum = sum(betaUnifScore_FDR0.05)), by = TF]
+#' 
 #' 
 #' TTRUST_TF_pvalues[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], ATF3knockout_betaUniformModel), by = TF]
 #' TTRUST_TF_pvalues[, fishersP := fishersPvalueSumTest(pValueSet[[1]]), by = TF]
