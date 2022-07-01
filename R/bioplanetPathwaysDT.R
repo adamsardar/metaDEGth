@@ -1,14 +1,17 @@
-#' Bioplanet - catalogue of biological pathways
+#' Pathbank - catalogue of biological pathways
 #'
-#' A dataset includind biological pathways from Bioplanet
+#' Pathbank is a new (Oct 2019) resource from the people that made SMPD
+#' (The Small Molecule Pathway Database).
 #'
-#' @format A data frame with 74148 rows and 5 variables:
+#' @format A data frame with 303334 rows and 7 variables:
 #' \describe{
-#'   \item{BioPlanetName}{BioPlanetName, names of the pathway}
-#'   \item{BioPlanetID}{"BioPlanetID, ID of the pathway}
+#'   \item{pathbank}{pathbank, pathway ID}
+#'   \item{pathway}{"pathway, name of the pathway}
+#'   \item{pathwayType}{pathwayType, pathway type}
+#'   \item{accession}{"accession, protein accession}
+#'   \item{geneSymbol}{geneSymbol, gene symbol}
 #'   \item{geneID}{geneID, gene ID}
-#'   \item{geneSymbol}{"geneSymbol, gene symbol}
-#'   \item{category}{category, category}
+#'   \item{ENSG}{ENSG, ensembl gene ID}
 #' }
-#' @source \url{https://tripod.nih.gov/bioplanet/}
-"bioplanetPathwaysDT"
+#' @source \url{https://www.pathbank.org/}
+"hsPathBankProteinSets_DT"
