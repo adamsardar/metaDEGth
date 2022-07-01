@@ -7,6 +7,7 @@
 #' @param betaUniformFit (optional) A beta-uniform model of the P-value distribution. Set to NULL to autofit on the fly.
 #' @param FDR The tolerable fraction of false positives within the set of positive scoring values. See Morris & Pounds (2003)
 #' @param x data
+#' @rdname betaUniformScore
 #' @return betaUniformScores A vector of P-Value scores
 #' @export
 #' @importFrom igraph V

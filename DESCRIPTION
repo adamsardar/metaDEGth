@@ -45,6 +45,7 @@ Collate:
     'erlotinib_adrHCC827_diffexDT.R'
     'fishersPvalueSumTest.R'
     'fitBetaUniformModel.R'
+    'hsPathBankProteinSets_DT.R'
     'koATF3_HCT116_diffexDT.R'
     'metaDEG.R'
     'metaDEGth-package.R'
