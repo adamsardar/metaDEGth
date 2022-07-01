@@ -6,6 +6,11 @@
 \usage{
 FDRestimate(obj, pValueThreshold)
 }
+\arguments{
+\item{obj}{data object}
+
+\item{pValueThreshold}{p-value threshold}
+}
 \description{
 False discovery rate - of BH fame. Equation 6 from M&P
 }

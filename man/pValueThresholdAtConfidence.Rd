@@ -6,6 +6,11 @@
 \usage{
 pValueThresholdAtConfidence(obj, confidenceLevel)
 }
+\arguments{
+\item{obj}{data object}
+
+\item{confidenceLevel}{confidence level}
+}
 \description{
 pValueThreshold estimate - estimates a threshdold such that FDRestimate(obj, pValueThreshold) <= confidenceLevel. Equatuion 7 in Morris & Pounds
 }

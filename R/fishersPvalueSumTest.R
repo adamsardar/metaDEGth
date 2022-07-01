@@ -12,6 +12,8 @@
 #' @inheritParams betaUniformPvalueSumTest
 #' @param rate Provide the rate for the exponential in the sum (distributed as a
 #' gamma)
+#' @param na.rm remove NA. Default set to TRUE
+#' @param ... extra-arguments
 #' @return combinedPval A single P-value combining the results of multiple
 #' independent hypothesis tests into one
 #' @references \url{https://en.wikipedia.org/wiki/Fisher\%27s_method}

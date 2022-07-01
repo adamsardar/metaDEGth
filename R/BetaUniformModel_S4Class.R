@@ -2,6 +2,8 @@
 #'
 #' Details the model P ~ (1-λ)β(a,1) + λβ(1,1), fit to a P-value set
 #'
+#' @param pValueThreshold p-value threshold
+#' @param object beta-uniform model
 #' @slot a Shape parameter of distribution β(a,1)
 #' @slot lambda Mixture parameter
 #' @slot pvalues A numeric vector of the values fit by the model
@@ -32,6 +34,7 @@ setMethod("show",
 
 #' A simple adapter from the class produced by BioNet
 #'
+#' @param obj data object
 #' @rdname convertFromBUM
 #' @export
 setGeneric("convertFromBUM", valueClass = "BetaUniformModel", function(obj) standardGeneric("convertFromBUM"))
@@ -49,6 +52,7 @@ setMethod("convertFromBUM", signature = c(obj = "bum"),
 
 #' True positive rate from M&P: A in table 1 and equation 5
 #'
+#' @param falseNegativeFraction false negative fraction
 #' @rdname truePositiveFraction
 #' @export
 setGeneric("truePositiveFraction",
@@ -72,7 +76,7 @@ setMethod("truePositiveFraction",
 
 
 #'  FALSE positive rate from M&P: C table 1 and equation 5
-#'
+#' @inheritParams falseNegativeFraction
 #' @rdname falsePositiveFraction
 #' @export
 setGeneric("falsePositiveFraction",  valueClass = "ScalarNumeric",
@@ -94,6 +98,8 @@ setMethod("falsePositiveFraction",
 
 #' False negative rate from M&P: B table 1 and equation 5
 #'
+#' @param obj data object
+#' @param pValueThreshold p-value threshold
 #' @rdname falseNegativeFraction
 #' @export
 setGeneric("falseNegativeFraction",  valueClass = "ScalarNumeric",
@@ -119,7 +125,7 @@ setMethod("falseNegativeFraction",
 
 
 #' True negative rate from M&P: D table 1 and equation 5
-#'
+#' @inheritParams falseNegativeFraction
 #' @rdname trueNegativeFraction
 #' @export
 setGeneric("trueNegativeFraction",  valueClass = "ScalarNumeric",
@@ -147,6 +153,7 @@ setMethod("trueNegativeFraction",
 #' Upper bound on the the noise component of mixture distribution
 #'
 #' π in equation 3 from Morris & Pounds
+#' @param obj data object
 #' @rdname noiseFractionUpperBound
 #' @export
 setGeneric("noiseFractionUpperBound", valueClass = "ScalarNumeric", function(obj) standardGeneric("noiseFractionUpperBound"))
@@ -159,6 +166,7 @@ setMethod("noiseFractionUpperBound",
 
 #' False discovery rate - of BH fame. Equation 6 from M&P
 #'
+#' @inheritParams falseNegativeFraction
 #' @rdname FDRestimate
 #' @export
 setGeneric("FDRestimate",  valueClass = "ScalarNumeric",
@@ -173,6 +181,8 @@ setMethod("FDRestimate",
 
 #' pValueThreshold estimate - estimates a threshdold such that FDRestimate(obj, pValueThreshold) <= confidenceLevel. Equatuion 7 in Morris & Pounds
 #'
+#' @param obj data object
+#' @param confidenceLevel confidence level
 #' @rdname pValueThresholdAtConfidence
 #' @export
 setGeneric("pValueThresholdAtConfidence",  valueClass = "ScalarNumeric",

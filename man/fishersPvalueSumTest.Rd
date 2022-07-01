@@ -15,7 +15,9 @@ fishersPvalueSumTest(testPvalues, ...)
 \arguments{
 \item{testPvalues}{A numerical vector of P-values to be tested.}
 
-\item{...}{Unused. Included to allow for similar form across P-value sum tests.}
+\item{...}{extra-arguments}
+
+\item{na.rm}{remove NA. Default set to TRUE}
 
 \item{rate}{Provide the rate for the exponential in the sum (distributed as a
 gamma)}

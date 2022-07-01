@@ -6,6 +6,11 @@
 \usage{
 falsePositiveFraction(obj, pValueThreshold)
 }
+\arguments{
+\item{obj}{data object}
+
+\item{pValueThreshold}{p-value threshold}
+}
 \description{
 FALSE positive rate from M&P: C table 1 and equation 5
 }

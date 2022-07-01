@@ -22,11 +22,11 @@ betaUniformScore(x, betaUniformFit = NULL, FDR = 0.05)
 \S4method{betaUniformScore}{ANY,bum,ANY}(x, betaUniformFit = NULL, FDR = 0.05)
 }
 \arguments{
+\item{x}{data}
+
 \item{betaUniformFit}{(optional) A beta-uniform model of the P-value distribution. Set to NULL to autofit on the fly.}
 
 \item{FDR}{The tolerable fraction of false positives within the set of positive scoring values. See Morris & Pounds (2003)}
-
-\item{pVals}{Vector of P-values to score}
 }
 \value{
 betaUniformScores A vector of P-Value scores

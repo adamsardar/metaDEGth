@@ -64,6 +64,9 @@ setMethod("betaUniformPvalueSumTest",
 #' The distribution of a log-trasnformed beta-uniform draw is a hyperexponential distribution. The distribution of the sum of multiple
 #' such hyperexponentials does nto have a name, but can be treated as a phase-type distribution with appropriate transition matrix.
 #'
+#' @param nValues number of values
+#' @param uniformProportion uniform proportion
+#' @param fittedBetaShape fitted beta parameter
 #' @references \url{https://en.wikipedia.org/wiki/Phase-type_distribution}
 #' @import Matrix
 constructHyperexponentialSumTransitionMatrix <- function(nValues, uniformProportion, fittedBetaShape){

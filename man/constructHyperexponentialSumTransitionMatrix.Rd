@@ -10,6 +10,13 @@ constructHyperexponentialSumTransitionMatrix(
   fittedBetaShape
 )
 }
+\arguments{
+\item{nValues}{number of values}
+
+\item{uniformProportion}{uniform proportion}
+
+\item{fittedBetaShape}{fitted beta parameter}
+}
 \description{
 The distribution of a log-trasnformed beta-uniform draw is a hyperexponential distribution. The distribution of the sum of multiple
 such hyperexponentials does nto have a name, but can be treated as a phase-type distribution with appropriate transition matrix.

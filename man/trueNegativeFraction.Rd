@@ -6,6 +6,11 @@
 \usage{
 trueNegativeFraction(obj, pValueThreshold)
 }
+\arguments{
+\item{obj}{data object}
+
+\item{pValueThreshold}{p-value threshold}
+}
 \description{
 True negative rate from M&P: D table 1 and equation 5
 }

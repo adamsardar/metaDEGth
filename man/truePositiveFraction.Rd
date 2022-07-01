@@ -6,6 +6,9 @@
 \usage{
 truePositiveFraction(obj, pValueThreshold)
 }
+\arguments{
+\item{falseNegativeFraction}{false negative fraction}
+}
 \description{
 True positive rate from M&P: A in table 1 and equation 5
 }

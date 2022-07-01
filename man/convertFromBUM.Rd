@@ -6,6 +6,9 @@
 \usage{
 convertFromBUM(obj)
 }
+\arguments{
+\item{obj}{data object}
+}
 \description{
 A simple adapter from the class produced by BioNet
 }

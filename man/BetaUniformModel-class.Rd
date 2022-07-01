@@ -4,6 +4,11 @@
 \name{BetaUniformModel-class}
 \alias{BetaUniformModel-class}
 \title{Object representation of a beta-uniform model fit to a P-value distribution}
+\arguments{
+\item{pValueThreshold}{p-value threshold}
+
+\item{object}{beta-uniform model}
+}
 \description{
 Details the model P ~ (1-λ)β(a,1) + λβ(1,1), fit to a P-value set
 }

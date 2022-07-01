@@ -6,6 +6,9 @@
 \usage{
 noiseFractionUpperBound(obj)
 }
+\arguments{
+\item{obj}{data object}
+}
 \description{
 π in equation 3 from Morris & Pounds
 }

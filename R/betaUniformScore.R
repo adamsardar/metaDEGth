@@ -1,13 +1,12 @@
 #' Fo each P-value, compute the log likelihood ratio of originating from signal or noise component
-#' 
+#'
 #' Relative to some false discovery threshold, compute the relative ratio of probabilities and then take the natural logarithm.
-#' 
+#'
 #' This function is somewhat analagous to BioNet::scoreNodes
-#' 
+#'
 #' @param betaUniformFit (optional) A beta-uniform model of the P-value distribution. Set to NULL to autofit on the fly.
 #' @param FDR The tolerable fraction of false positives within the set of positive scoring values. See Morris & Pounds (2003)
-#' @param pVals Vector of P-values to score
-#' 
+#' @param x data
 #' @return betaUniformScores A vector of P-Value scores
 #' @export
 #' @importFrom igraph V
@@ -27,9 +26,9 @@ setGeneric("betaUniformScore",
 setMethod("betaUniformScore",
           c(x="Pvalues", betaUniformFit = "BetaUniformModel", FDR = "ScalarNumeric"),
           function(x, betaUniformFit, FDR = 5E-2) {
-            
+
             FDRthreshold <- pValueThresholdAtConfidence(betaUniformFit, FDR)
-            
+
             return( (betaUniformFit@a - 1)*(log(x@.Data) - log(FDRthreshold) ) )
           })
 
@@ -37,10 +36,10 @@ setOldClass("igraph")
 #' @describeIn betaUniformScore Score nodes in an igraph; there must be a 'pValue'-like attribute (pVal, p.value etc.)
 setMethod("betaUniformScore",
           c(x="igraph", betaUniformFit = "ANY", FDR = "ANY"),
-          function(x, betaUniformFit = NULL, FDR = 5E-2) { 
-            
+          function(x, betaUniformFit = NULL, FDR = 5E-2) {
+
             x <- validateIgraphWithPvalues(x) #P-value attr is augmented as PVALUE vertex attribute
-            
+
             callGeneric( structure(V(x)$PVALUE, names = V(x)$name), betaUniformFit, FDR) })
 
 setMethod("betaUniformScore",
