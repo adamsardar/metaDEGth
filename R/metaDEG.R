@@ -9,6 +9,7 @@ globalVariables(c('.', 'size', 'members', 'BUScoreFDR0.05', 'betaUniformMixtureP
 #' @param geneSet Gene set collections
 #' @param betaUniformFit A beta-uniform model of the P-value distribution [optional - can be estimated from the P-Values provided]
 #' @param ... Additional parameters for methods
+#' @rdname metaDEG
 #' @export
 setGeneric("metaDEG",
            valueClass = "data.frame",

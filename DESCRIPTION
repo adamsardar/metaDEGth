@@ -40,6 +40,7 @@ Collate:
     'WZ4002_adrH1975_diffexDT.R'
     'betaUniformPvalueSumTest.R'
     'betaUniformScore.R'
+    'bioplanetPathwaysDT.R'
     'cas9OCT4_hsZygote_diffexDT.R'
     'erlotinib_adrHCC827_diffexDT.R'
     'fishersPvalueSumTest.R'

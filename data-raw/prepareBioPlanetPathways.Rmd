@@ -3,7 +3,7 @@ title: "Including BioPlanet"
 author: "Adam Sardar"
 date: "26/05/2020"
 output: html_document
-editor_options: 
+editor_options:
   chunk_output_type: console
 ---
 
@@ -11,10 +11,8 @@ The bioplanet resources looks like a fantastic source of curated gene sets, cull
 include them in the package:
 
 ```{r}
-
 library(data.table)
 library(stringr)
-
 ```
 
 pathways downloaded directly from [BioPlanet](https://tripod.nih.gov/bioplanet/)
@@ -93,7 +91,7 @@ erlotinib_geneIDexpress[, betaUnifScore_FDR0.05 := betaUniformScore(ER3_pValue, 
 
 
 #Group by GeneIDs
-pathwayPvals <- erlotinib_geneIDexpress %>% 
+pathwayPvals <- erlotinib_geneIDexpress %>%
   .[bioplanetPathwaysDT,,on = 'geneID', allow.cartesian=TRUE] %>%
   .[, .SD[!duplicated(geneID)], by = BioPlanetName] %>%
   .[!is.na(ER3_pValue),
@@ -149,8 +147,8 @@ siTAZdiffex_HFL1_diffexDT[, geneID := as.integer(geneID)]
 
 
 #Group by GeneIDs
-pathwayPvals <- siTAZdiffex_HFL1_diffexDT %>% 
-    .[bioplanetPathwaysDT,,on = "geneID", allow.cartesian=TRUE] %>% 
+pathwayPvals <- siTAZdiffex_HFL1_diffexDT %>%
+    .[bioplanetPathwaysDT,,on = "geneID", allow.cartesian=TRUE] %>%
     .[, .SD[!duplicated(geneID)], by = BioPlanetName] %>%
     .[!is.na(siTAZ1_pValue) & !is.na(siTAZ2_pValue),
     .(pValueSet1 = list(siTAZ1_pValue), pValueSet2 = list(siTAZ2_pValue),

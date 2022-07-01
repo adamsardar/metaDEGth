@@ -17,20 +17,22 @@ fishersPvalueSumTest(testPvalues, ...)
 
 \item{...}{Unused. Included to allow for similar form across P-value sum tests.}
 
-\item{rate}{Provide the rate for the expoential in the sum (distributed as a gamma) \link{optional}}
+\item{rate}{Provide the rate for the exponential in the sum (distributed as a
+gamma)}
 }
 \value{
-combinedPval A single P-value combining the results of multiple independent hypothesis tests into one
+combinedPval A single P-value combining the results of multiple
+independent hypothesis tests into one
 }
 \description{
 Fisher's method for combining P-values together consists of studying a test statistic of \eqn{T = \sum_i -log(P_i)} and
 finding the corresponding point in the cumulative distribution of an appropriately parameterised chi-squared distribution.
-
+}
+\details{
 The basic assumption is that P-values are uniformly distributed under the null-hypothesis, meaning that \eqn{-log(P) \sim exp(1)}. Recall that
 if \eqn{X \sim exp(1)} then \eqn{\sum_{k} X_{k} \sim \Gamma (k,1) \sim \chi^2 (2k) } (note that the gamma and erlang distributions are identical for integer \eqn{k}).
 We therefore simply calculate the point in the cumulative of the gamma distribution
-}
-\details{
+
 Note that the use of this method for analysis of omics datasets was pioneered by Luo et al.
 }
 \section{Methods (by class)}{
