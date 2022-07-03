@@ -1,8 +1,8 @@
-#' Fo each P-value, compute the log likelihood ratio of originating from signal or noise component
+#' For each P-value, compute the log likelihood ratio of originating from signal or noise component
 #'
-#' Relative to some false discovery threshold, compute the relative ratio of probabilities and then take the natural logarithm.
-#'
-#' This function is somewhat analagous to BioNet::scoreNodes
+#' Relative to some false discovery threshold, compute the relative
+#' ratio of probabilities and then take the natural logarithm. This function is
+#' somewhat analagous to BioNet::scoreNodes
 #'
 #' @param betaUniformFit (optional) A beta-uniform model of the P-value distribution. Set to NULL to autofit on the fly.
 #' @param FDR The tolerable fraction of false positives within the set of positive scoring values. See Morris & Pounds (2003)
@@ -42,11 +42,11 @@ setMethod("betaUniformScore",
             x <- validateIgraphWithPvalues(x) #P-value attr is augmented as PVALUE vertex attribute
 
             callGeneric( structure(V(x)$PVALUE, names = V(x)$name), betaUniformFit, FDR) })
-
+#' @describeIn betaUniformScore Score nodes from numeric object
 setMethod("betaUniformScore",
           c(x="numeric", betaUniformFit = "ANY", FDR = "ANY"),
           function(x, betaUniformFit = NULL, FDR = 5E-2) { callGeneric( new("Pvalues", .Data = x) , betaUniformFit, FDR) })
-
+#' @describeIn betaUniformScore Score nodes default
 setMethod("betaUniformScore",
           c(x="ANY", betaUniformFit = "ANY", FDR = "numeric"),
           function(x, betaUniformFit = NULL, FDR) {  callGeneric(x, betaUniformFit, mkScalar(FDR))  })

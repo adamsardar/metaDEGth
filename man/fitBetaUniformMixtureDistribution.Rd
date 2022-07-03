@@ -4,6 +4,7 @@
 \alias{fitBetaUniformMixtureDistribution}
 \alias{fitBetaUniformMixtureDistribution,Pvalues,ScalarInteger-method}
 \alias{fitBetaUniformMixtureDistribution,numeric,ANY-method}
+\alias{fitBetaUniformMixtureDistribution,Pvalues,numeric-method}
 \title{Fit a Beta-Uniform decomposition model to the provided p-values}
 \usage{
 fitBetaUniformMixtureDistribution(pValues, nStarts = 10L)
@@ -11,6 +12,8 @@ fitBetaUniformMixtureDistribution(pValues, nStarts = 10L)
 \S4method{fitBetaUniformMixtureDistribution}{Pvalues,ScalarInteger}(pValues, nStarts = 10L)
 
 \S4method{fitBetaUniformMixtureDistribution}{numeric,ANY}(pValues, nStarts = 10L)
+
+\S4method{fitBetaUniformMixtureDistribution}{Pvalues,numeric}(pValues, nStarts = 10L)
 }
 \arguments{
 \item{pValues}{A numeric vector of P-values for which to perform Beta-Uniform decomposition}
@@ -33,6 +36,9 @@ Analagous to BioNet::fitBumModel.
 \item \code{fitBetaUniformMixtureDistribution,Pvalues,ScalarInteger-method}: Typed method for dispatch
 
 \item \code{fitBetaUniformMixtureDistribution,numeric,ANY-method}: Adapter method, attempts to convert numeric values to Pvalues
+
+\item \code{fitBetaUniformMixtureDistribution,Pvalues,numeric-method}: fitting using nStarts defined
+by the user as numeric
 }}
 
 \examples{

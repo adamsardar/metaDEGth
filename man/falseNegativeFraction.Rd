@@ -2,9 +2,18 @@
 % Please edit documentation in R/BetaUniformModel_S4Class.R
 \name{falseNegativeFraction}
 \alias{falseNegativeFraction}
+\alias{falseNegativeFraction,BetaUniformModel,ScalarNumeric-method}
+\alias{falseNegativeFraction,ANY,missing-method}
+\alias{falseNegativeFraction,ANY,numeric-method}
 \title{False negative rate from M&P: B table 1 and equation 5}
 \usage{
 falseNegativeFraction(obj, pValueThreshold)
+
+\S4method{falseNegativeFraction}{BetaUniformModel,ScalarNumeric}(obj, pValueThreshold)
+
+\S4method{falseNegativeFraction}{ANY,missing}(obj, pValueThreshold)
+
+\S4method{falseNegativeFraction}{ANY,numeric}(obj, pValueThreshold)
 }
 \arguments{
 \item{obj}{data object}
@@ -14,3 +23,14 @@ falseNegativeFraction(obj, pValueThreshold)
 \description{
 False negative rate from M&P: B table 1 and equation 5
 }
+\section{Functions}{
+\itemize{
+\item \code{falseNegativeFraction,BetaUniformModel,ScalarNumeric-method}: method for dispatch
+
+\item \code{falseNegativeFraction,ANY,missing-method}: compute false negative rate using a
+threshold of 0.05
+
+\item \code{falseNegativeFraction,ANY,numeric-method}: compute false negative rate using
+numeric threshold defined by the user
+}}
+

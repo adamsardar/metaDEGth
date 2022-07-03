@@ -2,9 +2,12 @@
 % Please edit documentation in R/BetaUniformModel_S4Class.R
 \name{convertFromBUM}
 \alias{convertFromBUM}
+\alias{convertFromBUM,bum-method}
 \title{A simple adapter from the class produced by BioNet}
 \usage{
 convertFromBUM(obj)
+
+\S4method{convertFromBUM}{bum}(obj)
 }
 \arguments{
 \item{obj}{data object}
@@ -12,3 +15,8 @@ convertFromBUM(obj)
 \description{
 A simple adapter from the class produced by BioNet
 }
+\section{Methods (by class)}{
+\itemize{
+\item \code{bum}: typed method for dispatch
+}}
+

@@ -2,9 +2,12 @@
 % Please edit documentation in R/BetaUniformModel_S4Class.R
 \name{noiseFractionUpperBound}
 \alias{noiseFractionUpperBound}
+\alias{noiseFractionUpperBound,BetaUniformModel-method}
 \title{Upper bound on the the noise component of mixture distribution}
 \usage{
 noiseFractionUpperBound(obj)
+
+\S4method{noiseFractionUpperBound}{BetaUniformModel}(obj)
 }
 \arguments{
 \item{obj}{data object}
@@ -12,3 +15,8 @@ noiseFractionUpperBound(obj)
 \description{
 π in equation 3 from Morris & Pounds
 }
+\section{Methods (by class)}{
+\itemize{
+\item \code{BetaUniformModel}: method for dispatch
+}}
+

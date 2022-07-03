@@ -6,6 +6,9 @@
 \usage{
 \S4method{show}{BetaUniformModel}(object)
 }
+\arguments{
+\item{object}{BetaUniformModel object}
+}
 \description{
 Simple summary printer for a beta-uniform fit
 }

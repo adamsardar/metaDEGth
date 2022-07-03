@@ -7,7 +7,9 @@ globalVariables(c('.', 'size', 'members', 'BUScoreFDR0.05', 'betaUniformMixtureP
 #' @return A frame of gene sets, their members, their sizes and their meta-analysis P-values
 #' @param pValueSet P-values from experimental assay
 #' @param geneSet Gene set collections
-#' @param betaUniformFit A beta-uniform model of the P-value distribution [optional - can be estimated from the P-Values provided]
+#' @param betaUniformFit A beta-uniform model of the P-value distribution -
+#' optional - can be estimated from the P-Values provided
+#' @param plot Logical - draw a plot or not - default TRUE
 #' @param ... Additional parameters for methods
 #' @rdname metaDEG
 #' @export

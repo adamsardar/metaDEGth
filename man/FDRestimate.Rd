@@ -2,9 +2,12 @@
 % Please edit documentation in R/BetaUniformModel_S4Class.R
 \name{FDRestimate}
 \alias{FDRestimate}
+\alias{FDRestimate,BetaUniformModel,ScalarNumeric-method}
 \title{False discovery rate - of BH fame. Equation 6 from M&P}
 \usage{
 FDRestimate(obj, pValueThreshold)
+
+\S4method{FDRestimate}{BetaUniformModel,ScalarNumeric}(obj, pValueThreshold)
 }
 \arguments{
 \item{obj}{data object}
@@ -14,3 +17,8 @@ FDRestimate(obj, pValueThreshold)
 \description{
 False discovery rate - of BH fame. Equation 6 from M&P
 }
+\section{Functions}{
+\itemize{
+\item \code{FDRestimate,BetaUniformModel,ScalarNumeric-method}: method for BetaUniformModel object
+}}
+

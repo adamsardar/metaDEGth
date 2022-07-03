@@ -42,7 +42,8 @@ metaDEG(pValueSet, geneSet, betaUniformFit, ...)
 
 \item{geneSet}{Gene set collections}
 
-\item{betaUniformFit}{A beta-uniform model of the P-value distribution \link{optional - can be estimated from the P-Values provided}}
+\item{betaUniformFit}{A beta-uniform model of the P-value distribution -
+optional - can be estimated from the P-Values provided}
 
 \item{...}{Additional parameters for methods}
 
@@ -51,6 +52,8 @@ metaDEG(pValueSet, geneSet, betaUniformFit, ...)
 \item{geneSetNameAttr}{The name of the gene set identifier attribute in the geneSet frame}
 
 \item{geneSetMembersAttr}{The name of the gene set members attribute in the geneSet frame}
+
+\item{plot}{Logical - draw a plot or not - default TRUE}
 }
 \value{
 A frame of gene sets, their members, their sizes and their meta-analysis P-values

@@ -2,13 +2,33 @@
 % Please edit documentation in R/BetaUniformModel_S4Class.R
 \name{truePositiveFraction}
 \alias{truePositiveFraction}
+\alias{truePositiveFraction,BetaUniformModel,ScalarNumeric-method}
+\alias{truePositiveFraction,ANY,missing-method}
+\alias{truePositiveFraction,ANY,numeric-method}
 \title{True positive rate from M&P: A in table 1 and equation 5}
 \usage{
 truePositiveFraction(obj, pValueThreshold)
+
+\S4method{truePositiveFraction}{BetaUniformModel,ScalarNumeric}(obj, pValueThreshold)
+
+\S4method{truePositiveFraction}{ANY,missing}(obj, pValueThreshold)
+
+\S4method{truePositiveFraction}{ANY,numeric}(obj, pValueThreshold)
 }
 \arguments{
-\item{falseNegativeFraction}{false negative fraction}
+\item{obj}{data object}
+
+\item{pValueThreshold}{p-value threshold}
 }
 \description{
 True positive rate from M&P: A in table 1 and equation 5
 }
+\section{Functions}{
+\itemize{
+\item \code{truePositiveFraction,BetaUniformModel,ScalarNumeric-method}: method for dispatch
+
+\item \code{truePositiveFraction,ANY,missing-method}: using a threshold of 0.05
+
+\item \code{truePositiveFraction,ANY,numeric-method}: threshold defined by the user
+}}
+

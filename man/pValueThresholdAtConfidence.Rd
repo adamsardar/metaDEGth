@@ -2,9 +2,15 @@
 % Please edit documentation in R/BetaUniformModel_S4Class.R
 \name{pValueThresholdAtConfidence}
 \alias{pValueThresholdAtConfidence}
+\alias{pValueThresholdAtConfidence,ANY,numeric-method}
+\alias{pValueThresholdAtConfidence,BetaUniformModel,ScalarNumeric-method}
 \title{pValueThreshold estimate - estimates a threshdold such that FDRestimate(obj, pValueThreshold) <= confidenceLevel. Equatuion 7 in Morris & Pounds}
 \usage{
 pValueThresholdAtConfidence(obj, confidenceLevel)
+
+\S4method{pValueThresholdAtConfidence}{ANY,numeric}(obj, confidenceLevel)
+
+\S4method{pValueThresholdAtConfidence}{BetaUniformModel,ScalarNumeric}(obj, confidenceLevel)
 }
 \arguments{
 \item{obj}{data object}
@@ -14,3 +20,10 @@ pValueThresholdAtConfidence(obj, confidenceLevel)
 \description{
 pValueThreshold estimate - estimates a threshdold such that FDRestimate(obj, pValueThreshold) <= confidenceLevel. Equatuion 7 in Morris & Pounds
 }
+\section{Functions}{
+\itemize{
+\item \code{pValueThresholdAtConfidence,ANY,numeric-method}: method for dispatch
+
+\item \code{pValueThresholdAtConfidence,BetaUniformModel,ScalarNumeric-method}: p-value estimate for scalar numeric
+}}
+

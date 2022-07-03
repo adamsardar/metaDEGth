@@ -6,6 +6,13 @@
 \usage{
 qbetauniform(p, a, lambda)
 }
+\arguments{
+\item{p}{vector of probabilities}
+
+\item{a}{non-negative parameter of the Beta distribution.}
+
+\item{lambda}{lambda parameter}
+}
 \description{
 Quantile function for Beta-uniform model
 }

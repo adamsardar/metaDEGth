@@ -17,7 +17,7 @@ betaUniformPvalueSumTest(testPvalues, betaUniformFit, na.rm = TRUE)
 
 \item{betaUniformFit}{A beta-uniform model of the P-value distribution.}
 
-\item{...}{Unused. Included to allow for similar form across P-value sum tests.}
+\item{na.rm}{Remove NA - default TRUE}
 }
 \value{
 combinedPval A single p-value combining the results of multiple hypothesis tests into one

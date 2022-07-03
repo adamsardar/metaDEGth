@@ -6,6 +6,13 @@
 \usage{
 rbetauniform(n, a, lambda)
 }
+\arguments{
+\item{n}{number of trials}
+
+\item{a}{non-negative parameter of the Beta distribution}
+
+\item{lambda}{parameter}
+}
 \description{
 Random draw function for Beta-uniform model
 }

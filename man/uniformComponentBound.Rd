@@ -6,6 +6,13 @@
 \usage{
 uniformComponentBound(x, a, lambda)
 }
+\arguments{
+\item{x}{vector of values}
+
+\item{a}{beta distribution shape parameter}
+
+\item{lambda}{parameter lambda}
+}
 \description{
 Upper bound on Uniform component of Beta-uniform model
 }

@@ -6,6 +6,15 @@
 \usage{
 dbetauniform(x, a, lambda, log = FALSE)
 }
+\arguments{
+\item{x}{vector of values}
+
+\item{a}{beta distribution shape parameter}
+
+\item{lambda}{parameter lambda}
+
+\item{log}{return the logarithmic version of the output}
+}
 \description{
 Density function for Beta-uniform Model
 }

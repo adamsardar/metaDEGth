@@ -10,7 +10,7 @@ messagedUserAboutExpokit <- FALSE
 #'
 #' @param testPvalues A numerical vector of P-values to be tested.
 #' @param betaUniformFit A beta-uniform model of the P-value distribution.
-#' @param ... Unused. Included to allow for similar form across P-value sum tests.
+#' @param na.rm Remove NA - default TRUE
 #'
 #' @return combinedPval A single p-value combining the results of multiple hypothesis tests into one
 #' @seealso fishersCombindedProbabilityTest

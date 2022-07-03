@@ -4,16 +4,22 @@
 \alias{betaUniformScore}
 \alias{betaUniformScore,Pvalues,BetaUniformModel,ScalarNumeric-method}
 \alias{betaUniformScore,igraph,ANY,ANY-method}
+\alias{betaUniformScore,numeric,ANY,ANY-method}
+\alias{betaUniformScore,ANY,ANY,numeric-method}
 \alias{betaUniformScore,BetaUniformModel,missing,ANY-method}
 \alias{betaUniformScore,Pvalues,NULL,ANY-method}
 \alias{betaUniformScore,ANY,bum,ANY-method}
-\title{Fo each P-value, compute the log likelihood ratio of originating from signal or noise component}
+\title{For each P-value, compute the log likelihood ratio of originating from signal or noise component}
 \usage{
 betaUniformScore(x, betaUniformFit = NULL, FDR = 0.05)
 
 \S4method{betaUniformScore}{Pvalues,BetaUniformModel,ScalarNumeric}(x, betaUniformFit = NULL, FDR = 0.05)
 
 \S4method{betaUniformScore}{igraph,ANY,ANY}(x, betaUniformFit = NULL, FDR = 0.05)
+
+\S4method{betaUniformScore}{numeric,ANY,ANY}(x, betaUniformFit = NULL, FDR = 0.05)
+
+\S4method{betaUniformScore}{ANY,ANY,numeric}(x, betaUniformFit = NULL, FDR = 0.05)
 
 \S4method{betaUniformScore}{BetaUniformModel,missing,ANY}(x, betaUniformFit = NULL, FDR = 0.05)
 
@@ -32,16 +38,19 @@ betaUniformScore(x, betaUniformFit = NULL, FDR = 0.05)
 betaUniformScores A vector of P-Value scores
 }
 \description{
-Relative to some false discovery threshold, compute the relative ratio of probabilities and then take the natural logarithm.
-}
-\details{
-This function is somewhat analagous to BioNet::scoreNodes
+Relative to some false discovery threshold, compute the relative
+ratio of probabilities and then take the natural logarithm. This function is
+somewhat analagous to BioNet::scoreNodes
 }
 \section{Functions}{
 \itemize{
 \item \code{betaUniformScore,Pvalues,BetaUniformModel,ScalarNumeric-method}: Score P-values against an explicit beta-uniform model object
 
 \item \code{betaUniformScore,igraph,ANY,ANY-method}: Score nodes in an igraph; there must be a 'pValue'-like attribute (pVal, p.value etc.)
+
+\item \code{betaUniformScore,numeric,ANY,ANY-method}: Score nodes from numeric object
+
+\item \code{betaUniformScore,ANY,ANY,numeric-method}: Score nodes default
 
 \item \code{betaUniformScore,BetaUniformModel,missing,ANY-method}: Score p-values from a BetaUniformModel object against inself
 
