@@ -11,6 +11,7 @@ License: MPL-2.0 | file LICENSE
 URL: https://gitlab.internal.etherapeutics.co.uk/platform/datasciops/metadegth
 ByteCompile: TRUE
 LazyData: true
+LazyDataCompression: xz
 Encoding: UTF-8
 Imports:
     assertthat (>= 0.2),
