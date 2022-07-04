@@ -21,7 +21,7 @@ setClass("BetaUniformModel",
 #' @param object BetaUniformModel object
 #' @export
 setMethod("show",
-          c(object="BetaUniformModel"),
+          c(object = "BetaUniformModel"),
           function(object) {
 
             cat("Beta-Uniform-Mixture (BUM) model\n\n")
@@ -43,11 +43,12 @@ setGeneric("convertFromBUM", valueClass = "BetaUniformModel", function(obj) stan
 setOldClass("bum")
 #' @describeIn convertFromBUM typed method for dispatch
 setMethod("convertFromBUM", signature = c(obj = "bum"),
-          function(obj){ new("BetaUniformModel",
-                             a = mkScalar(obj$a),
-                             lambda = mkScalar(obj$lambda),
-                             pvalues = obj$pvalues,
-                             negLLH = mkScalar(obj$negLL))} )
+          function(obj){
+            new("BetaUniformModel",
+            a = mkScalar(obj$a),
+            lambda = mkScalar(obj$lambda),
+            pvalues = obj$pvalues,
+            negLLH = mkScalar(obj$negLL))})
 
 ## Distribution methods ##
 
@@ -65,8 +66,8 @@ setMethod("truePositiveFraction",
           signature = signature(obj = "BetaUniformModel", pValueThreshold = "ScalarNumeric"),
           function(obj, pValueThreshold) {
 
-            Ftau <- obj@lambda*pValueThreshold + (1-obj@lambda)*pValueThreshold^obj@a
-            return( Ftau - noiseFractionUpperBound(obj)*pValueThreshold ) }) # p_A(τ)= F(τ)−πτ
+            Ftau <- obj@lambda * pValueThreshold + (1-obj@lambda)*pValueThreshold^obj@a
+            return(Ftau - noiseFractionUpperBound(obj)*pValueThreshold)}) # p_A(τ)= F(τ)−πτ
 #' @describeIn truePositiveFraction using a threshold of 0.05
 setMethod("truePositiveFraction",
           signature = signature(obj = "ANY", pValueThreshold = "missing"),
@@ -76,7 +77,8 @@ setMethod("truePositiveFraction",
 #' @describeIn truePositiveFraction threshold defined by the user
 setMethod("truePositiveFraction",
           signature = signature(obj = "ANY", pValueThreshold = "numeric"),
-          function(obj, pValueThreshold) { return(callGeneric(obj, mkScalar(pValueThreshold)))  })
+          function(obj, pValueThreshold) {
+            return(callGeneric(obj, mkScalar(pValueThreshold)))})
 
 
 #'  FALSE positive rate from M&P: C table 1 and equation 5
@@ -84,23 +86,27 @@ setMethod("truePositiveFraction",
 #' @rdname falsePositiveFraction
 #' @export
 setGeneric("falsePositiveFraction",  valueClass = "ScalarNumeric",
-           function(obj, pValueThreshold){ standardGeneric("falsePositiveFraction") } )
+           function(obj, pValueThreshold){
+            standardGeneric("falsePositiveFraction")})
 #' @describeIn falsePositiveFraction method for dispatch
 setMethod("falsePositiveFraction",
           signature = signature(obj = "BetaUniformModel", pValueThreshold = "ScalarNumeric"),
-          function(obj, pValueThreshold) { return( noiseFractionUpperBound(obj)*pValueThreshold ) }) # p_C= πτ
+          function(obj, pValueThreshold) {
+            return( noiseFractionUpperBound(obj)*pValueThreshold)}) # p_C= πτ
 #' @describeIn falsePositiveFraction compute false positive rate using a
 #' threshold of 0.05
 setMethod("falsePositiveFraction",
           signature = signature(obj = "ANY", pValueThreshold = "missing"),
-          function(obj, pValueThreshold) { message("Using a threshold of 0.05"); return(callGeneric(obj, 0.05 )) })
+          function(obj, pValueThreshold) {
+            message("Using a threshold of 0.05"); return(callGeneric(obj, 0.05 ))})
 
 #' @importFrom Biobase mkScalar
 #' @describeIn falsePositiveFraction compute false positive rate using threshold
 #' defined by the user, numeric
 setMethod("falsePositiveFraction",
           signature = signature(obj = "ANY", pValueThreshold = "numeric"),
-          function(obj, pValueThreshold) { return(callGeneric(obj, mkScalar(pValueThreshold)))  })
+          function(obj, pValueThreshold) {
+            return(callGeneric(obj, mkScalar(pValueThreshold)))})
 
 
 #' False negative rate from M&P: B table 1 and equation 5
@@ -110,15 +116,16 @@ setMethod("falsePositiveFraction",
 #' @rdname falseNegativeFraction
 #' @export
 setGeneric("falseNegativeFraction",  valueClass = "ScalarNumeric",
-           function(obj, pValueThreshold){ standardGeneric("falseNegativeFraction") } )
+           function(obj, pValueThreshold){
+            standardGeneric("falseNegativeFraction")})
 #' @describeIn falseNegativeFraction method for dispatch
 setMethod("falseNegativeFraction",
           signature = signature(obj = "BetaUniformModel", pValueThreshold = "ScalarNumeric"),
           function(obj, pValueThreshold) {
 
-            Ftau <- obj@lambda*pValueThreshold + (1-obj@lambda)*pValueThreshold^obj@a
+            Ftau <- obj@lambda * pValueThreshold + (1-obj@lambda)*pValueThreshold^obj@a
 
-            return(1 - Ftau - (1-pValueThreshold)*noiseFractionUpperBound(obj)   ) }) # p_B(τ)=1−F(τ)−(1−τ)π
+            return(1 - Ftau - (1-pValueThreshold) * noiseFractionUpperBound(obj) ) }) # p_B(τ)=1−F(τ)−(1−τ)π
 #' @describeIn falseNegativeFraction compute false negative rate using a
 #' threshold of 0.05
 setMethod("falseNegativeFraction",
@@ -139,27 +146,29 @@ setMethod("falseNegativeFraction",
 #' @rdname trueNegativeFraction
 #' @export
 setGeneric("trueNegativeFraction",  valueClass = "ScalarNumeric",
-           function(obj, pValueThreshold){ standardGeneric("trueNegativeFraction") } )
+           function(obj, pValueThreshold){
+            standardGeneric("trueNegativeFraction")})
 #' @describeIn trueNegativeFraction method for dispatch
 setMethod("trueNegativeFraction",
           signature = signature(obj = "BetaUniformModel", pValueThreshold = "ScalarNumeric"),
           function(obj, pValueThreshold) {
+            Ftau <- obj@lambda * pValueThreshold + (1-obj@lambda)*pValueThreshold^obj@a
 
-            Ftau <- obj@lambda*pValueThreshold + (1-obj@lambda)*pValueThreshold^obj@a
-
-            return( (1-pValueThreshold)*noiseFractionUpperBound(obj) ) }) # p_D(τ)=(1−τ)π
+            return((1-pValueThreshold)*noiseFractionUpperBound(obj))}) # p_D(τ)=(1−τ)π
 #' @describeIn trueNegativeFraction compute true negative rate using a
 #' threshold of 0.05
 setMethod("trueNegativeFraction",
           signature = signature(obj = "ANY", pValueThreshold = "missing"),
-          function(obj, pValueThreshold) { message("Using a threshold of 0.05"); return(callGeneric(obj, 0.05 )) })
+          function(obj, pValueThreshold) {
+            message("Using a threshold of 0.05"); return(callGeneric(obj, 0.05 ))})
 
 #' @importFrom Biobase mkScalar
 #' @describeIn trueNegativeFraction compute true negative rate using
 #' numeric threshold defined by the user
 setMethod("trueNegativeFraction",
           signature = signature(obj = "ANY", pValueThreshold = "numeric"),
-          function(obj, pValueThreshold) { return(callGeneric(obj, mkScalar(pValueThreshold)))  })
+          function(obj, pValueThreshold) {
+            return(callGeneric(obj, mkScalar(pValueThreshold)))})
 
 
 #' Upper bound on the the noise component of mixture distribution
@@ -172,7 +181,8 @@ setGeneric("noiseFractionUpperBound", valueClass = "ScalarNumeric", function(obj
 #' @describeIn noiseFractionUpperBound method for dispatch
 setMethod("noiseFractionUpperBound",
           signature(obj = "BetaUniformModel"),
-          function(obj){ return(obj@lambda + (1-obj@lambda)*obj@a) } )
+          function(obj){
+            return(obj@lambda + (1-obj@lambda)*obj@a)})
 
 
 
@@ -182,7 +192,8 @@ setMethod("noiseFractionUpperBound",
 #' @rdname FDRestimate
 #' @export
 setGeneric("FDRestimate",  valueClass = "ScalarNumeric",
-           function(obj, pValueThreshold){ standardGeneric("FDRestimate") } )
+           function(obj, pValueThreshold){
+            standardGeneric("FDRestimate")} )
 #' @describeIn FDRestimate method for BetaUniformModel object
 setMethod("FDRestimate",
           signature = signature(obj = "BetaUniformModel", pValueThreshold = "ScalarNumeric"),
@@ -198,17 +209,19 @@ setMethod("FDRestimate",
 #' @rdname pValueThresholdAtConfidence
 #' @export
 setGeneric("pValueThresholdAtConfidence",  valueClass = "ScalarNumeric",
-           function(obj, confidenceLevel){ standardGeneric("pValueThresholdAtConfidence") } )
+           function(obj, confidenceLevel){
+            standardGeneric("pValueThresholdAtConfidence")})
 #' @describeIn pValueThresholdAtConfidence method for dispatch
 setMethod("pValueThresholdAtConfidence",
           signature = signature(obj = "ANY", confidenceLevel = "numeric"),
-          function(obj, confidenceLevel) { return(callGeneric(obj, mkScalar(confidenceLevel)))  })
+          function(obj, confidenceLevel) {
+            return(callGeneric(obj, mkScalar(confidenceLevel)))})
 #' @describeIn pValueThresholdAtConfidence p-value estimate for scalar numeric
 setMethod("pValueThresholdAtConfidence",
           signature = signature(obj = "BetaUniformModel", confidenceLevel = "ScalarNumeric"),
           function(obj, confidenceLevel) {
 
-            return( (( noiseFractionUpperBound(obj) - confidenceLevel*obj@lambda )/(confidenceLevel*(1-obj@lambda)))^(1/(obj@a - 1))  ) })
+            return( (( noiseFractionUpperBound(obj) - confidenceLevel*obj@lambda )/(confidenceLevel*(1-obj@lambda)))^(1/(obj@a - 1)))})
 
 
 

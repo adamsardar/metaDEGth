@@ -51,12 +51,12 @@ setMethod("betaUniformPvalueSumTest",
             transitionMatrix <- constructHyperexponentialSumTransitionMatrix(nValues, uniformProportion, fittedBetaShape)
 
             initialProb <- Matrix(0,ncol = ncol(transitionMatrix), nrow = 1, sparse = TRUE)
-            initialProb[1:2] <- c(uniformProportion, 1-uniformProportion)
+            initialProb[1:2] <- c(uniformProportion, 1 - uniformProportion)
 
             # The inverse CDF of the phase-type distribution is  alpha * exp(x*S) * 1vec, where S is the transition matrix and alpha the initial probability
-            phaseRateP <- sum(initialProb %*% Matrix::expm(testStatistic*transitionMatrix))
+            phaseRateP <- sum(initialProb %*% Matrix::expm(testStatistic * transitionMatrix))
 
-            return( new("Pvalue", mkScalar(phaseRateP)) )
+            return(new("Pvalue", mkScalar(phaseRateP)))
           })
 
 #' Model a sum of log-transformed beta-uniform mixture draws as a sum of hyperexponential distributions: a phase-type distribution
@@ -80,15 +80,15 @@ constructHyperexponentialSumTransitionMatrix <- function(nValues, uniformProport
     # Populte the diagonal, diagonal+1, diagonal+2 and diagonal+3 with values
     # Complicated, but it is over an order of magnitude faster than previous implementation (present in test-BetaUniformPvalueSum.R)
     hyperexponentialSumTransitionMatrix <-
-      sparseMatrix(i = c(seq(1,2*nValues), seq(1,2*nValues-1), seq(1,2*nValues-2), seq(1,2*nValues-3)) ,
-                   j = c(seq(1,2*nValues), seq(2,2*nValues), seq(3,2*nValues), seq(4,2*nValues)) ,
+      sparseMatrix(i = c(seq(1,2*nValues), seq(1,2*nValues - 1), seq(1,2 * nValues - 2), seq(1,2*nValues - 3)) ,
+                   j = c(seq(1,2 * nValues), seq(2,2*nValues), seq(3,2 * nValues), seq(4,2*nValues)) ,
                    x = c(rep(c(-1,-fittedBetaShape), times = nValues), #diagonal
-                         c(rep(c(0,fittedBetaShape*uniformProportion), times = (nValues-1)),0), # diagonal+1
-                         rep(c(uniformProportion,fittedBetaShape*(1-uniformProportion)), times = (nValues-1)), # diagonal+2
-                         c(rep(c((1-uniformProportion),0), times = (nValues-2)),(1-uniformProportion))  ), # diagonal+3
-                   dims = c(2*nValues,2*nValues))
+                         c(rep(c(0,fittedBetaShape * uniformProportion), times = (nValues - 1)),0), # diagonal+1
+                         rep(c(uniformProportion,fittedBetaShape *(1 - uniformProportion)), times = (nValues - 1)), # diagonal+2
+                         c(rep(c((1 - uniformProportion),0), times = (nValues-2)),(1 - uniformProportion))  ), # diagonal+3
+                   dims = c(2 * nValues,2 * nValues))
    #TODO - consider using check = FALSE. 2x speed improvement ...
   }
 
-  return( drop0(hyperexponentialSumTransitionMatrix) )
+  return(drop0(hyperexponentialSumTransitionMatrix))
 }
