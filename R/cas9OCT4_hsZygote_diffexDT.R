@@ -46,8 +46,8 @@
 #' TTRUST_TF_pvalues[, betaUniformMixtureP := betaUniformPvalueSumTest(pValueSet[[1]], OCT4knockout_betaUniformModel), by = TF]
 #' TTRUST_TF_pvalues[, fishersP := fishersPvalueSumTest(pValueSet[[1]]), by = TF]
 #' 
-#' TTRUST_TF_pvalues[p.adjust(betaUniformMixtureP) < 0.05] # No significant gene sets
-#' TTRUST_TF_pvalues[p.adjust(fishersP) < 0.05] # Quite a few ... too many for so little signal?
+#' TTRUST_TF_pvalues[p.adjust(betaUniformMixtureP, method = 'fdr') < 0.05] # No significant gene sets
+#' TTRUST_TF_pvalues[p.adjust(fishersP, method = 'fdr') < 0.05] # Quite a few ... too many for so little signal?
 #' 
 #' TTRUST_TF_pvalues[scoreSum > 0]
 #' 
